@@ -15,6 +15,10 @@ main {
   padding: 0;
 }
 
+#messages li {
+  overflow-wrap: break-word;
+}
+
 #chat-form {
   display: grid;
   gap: 0.5rem;
