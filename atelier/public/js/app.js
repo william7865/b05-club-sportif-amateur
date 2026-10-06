@@ -1,10 +1,13 @@
 import { validateMessage, replyTo } from './brain.js';
+import { renderMessages } from './view.js';
 
 const form = document.querySelector('#chat-form');
 const status = document.querySelector('#status');
 const messageInput = document.querySelector('#message');
 const messages = document.querySelector('#messages');
 const suggestions = document.querySelector('ul#suggestions');
+
+const historique = [];
 
 suggestions.addEventListener('click', (event) => {
   const button = event.target.closest('button');
@@ -22,12 +25,9 @@ form.addEventListener('submit', (event) => {
     messageInput.focus();
     return;
   }
-  const item = document.createElement('li');
-  item.textContent = `Vous : ${validation.value}`;
-  messages.append(item);
-  const answer = document.createElement('li');
-  answer.textContent = `Cap Web : ${replyTo(validation.value)}`;
-  messages.append(answer);
+  historique.push({ role: 'user', text: validation.value });
+  historique.push({ role: 'assistant', text: replyTo(validation.value) });
+  renderMessages(historique, messages);
   messageInput.value = '';
   status.textContent = '';
 });
