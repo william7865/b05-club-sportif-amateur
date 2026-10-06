@@ -38,12 +38,12 @@ Pour chaque checkpoint : cochez la case quand toute la preuve de la fiche est r�
 - [ ] Validé
 - Preuve (page de départ affichée sur votre poste, cahier personnel recopié ci-dessus) :
 - Le `p#status` est-il vide dans le HTML ? Qui écrit sa phrase ? Oui, il est vide dans `index.html` (`<p id="status" role="status"></p>`). C'est `public/js/app.js` qui écrit « Votre point de départ est prêt. » avec `textContent`, une fois la page chargée par le navigateur.
-- Décision prise ensemble :
-- Difficulté qui reste :
+- Décision prise ensemble : thème « Club sportif amateur », pour les adhérents ; l'assistant reste sur le niveau, l'objectif et les disponibilités, sans conseil médical. William manipule en premier, Nicolas vérifie.
+- Difficulté qui reste : l'épreuve de l'explication n'est pas encore passée. `dsh` a introduit une erreur de syntaxe en corrigeant une simple faute de français ; sans `node --check`, elle ne se voyait pas dans le diff au premier coup d'œil. trois défauts relevés ne sont pas corrigés (liste des messages sans nom, pas de `h2` ni de repères, bouton « Envoyer » de 21 px de haut). savoir repérer seul, dans un diff, une protection inutile comme `?.` ou `contains`. le mode `headless` ne garde pas la conversation, donc le « ok » a dû être renvoyé avec le prompt et les hypothèses. La colonne « vague » n'a pas été vérifiée dans le navigateur avant la remise à zéro. une erreur `"refs" must be a mapping` au premier essai, due à un espace supprimé dans `.credentials.yaml`. La clé agent a été affichée par erreur dans une session d'assistant IA : à signaler au formateur. La session `dsh web` en Read Only reste à montrer. les essais A, B et C viennent de trois contextes neufs du même assistant, pas de trois conversations d'un chat web. aucune régression trouvée sur trois modifications ; la liste de contrôle ne couvre que huit comportements, il peut en rester hors liste. la réponse ne vient pas d'un chat web public mais d'un assistant IA de code, à qui le prompt a été donné tel quel. le cahier personnel n'était pas arrivé au début ; il a été recopié plus tard, à la réception du fichier de réglages.
 
 ### J1-02 · 💬 Premier prompt — [fiche](checkpoints/J1-02-premier-prompt.md)
 
-- [ ] Validé
+- [x] Validé
 - Preuve : `essais-n0/chatbot-v1.html` s'ouvre ; le prompt et la première réponse sont collés ci-dessous, en entier, sans donnée personnelle.
 - Mon prompt, tel quel :
 
@@ -240,19 +240,30 @@ Pour chaque checkpoint : cochez la case quand toute la preuve de la fiche est r�
 </html>
 ```
 
-- Trois lignes d'observation (ce que j'ai vu en utilisant la page) :
+- Trois lignes d'observation (ce que j'ai vu en utilisant la page) (essais faits dans un navigateur de test piloté par script, pas à la main) :
+  - La page s'ouvre sans erreur avec un message d'accueil qui demande le niveau. À « Je suis débutant, quelle séance me conseilles-tu ? », le bot répond « Noté. Quel est ton objectif : endurance, force ou souplesse ? » : il ne répond pas à la question, il suit son questionnaire.
+  - Hors thème (« Quelle est la capitale du Japon ? ») : « Je n'ai pas compris. Ton objectif : endurance, force ou souplesse ? ». Il ne dit pas qu'il ne sait pas, il repose sa question.
+  - Un message vide ne fait rien, sans aucun message d'explication. Après F5, toute la conversation a disparu. Le champ n'a pas de limite de longueur.
 - Difficulté qui reste :
 
 ### J1-03 · 💥 Ça marche… jusqu'à quand — [fiche](checkpoints/J1-03-jusqua-quand.md)
 
-- [ ] Validé
-- Liste de contrôle de la version 1 (cinq à huit comportements essayés) :
+- [x] Validé
+- Liste de contrôle de la version 1 (cinq à huit comportements essayés) (essais faits dans un navigateur de test piloté par script, pas à la main) :
+  1. La page s'ouvre sans erreur dans la console et affiche le message d'accueil.
+  2. Entrée envoie le message ; il apparaît dans la conversation.
+  3. Le bot répond sur le thème (« débutant » → il demande l'objectif).
+  4. Un message hors thème reçoit « Je n'ai pas compris… ».
+  5. Un message d'espaces n'ajoute rien.
+  6. `<b>gras</b>` s'affiche avec ses chevrons, pas en gras.
+  7. À 360 px de large, pas de défilement horizontal et le champ reste visible.
+  8. Le champ est vidé après l'envoi.
 - Journal des régressions, une entrée par modification : ce que j'ai demandé · ce qui marche maintenant · ce qui marchait et ne marche plus · ce que je n'avais pas vu, et comment je l'ai trouvé.
   - Modification 1 (`chatbot-v2.html`) :
     - Ce que j'ai demandé : « Ajoute un bouton Effacer qui vide la conversation. »
-    - Ce qui marche maintenant :
-    - Ce qui marchait et ne marche plus :
-    - Ce que je n'avais pas vu, et comment je l'ai trouvé :
+    - Ce qui marche maintenant : un message vide affiche « Écris un message avant d'envoyer. » au-dessus du champ ; le message disparaît à l'envoi suivant. après F5, les 13 lignes affichées avant le rechargement sont toujours là (13 avant, 13 après ; en version 2 : 13 avant, 5 après). un bouton « Effacer » apparaît dans l'en-tête ; un clic vide la conversation et remet le message d'accueil.
+    - Ce qui marchait et ne marche plus : rien trouvé, les huit lignes de la liste de contrôle passent encore. rien trouvé, les huit lignes de la liste de contrôle passent encore. rien trouvé, les huit lignes de la liste de contrôle passent encore.
+    - Ce que je n'avais pas vu, et comment je l'ai trouvé : rien de cassé, même recherche, avec la mémoire de la version 3 en plus dans la liste. rien de cassé, même recherche. Le bouton « Effacer » de la version 2 entre dans la liste de contrôle. rien de cassé ; cherché en rejouant les huit lignes de la liste, plus un message de 500 caractères et un rechargement.
   - Modification 2 (`chatbot-v3.html`) :
     - Ce que j'ai demandé : « Garde les messages quand je recharge la page. »
     - Ce qui marche maintenant :
@@ -263,13 +274,13 @@ Pour chaque checkpoint : cochez la case quand toute la preuve de la fiche est r�
     - Ce qui marche maintenant :
     - Ce qui marchait et ne marche plus :
     - Ce que je n'avais pas vu, et comment je l'ai trouvé :
-- Chasse à l'angle mort (ce qui a été trouvé, et par qui) :
-- Deux phrases de conclusion :
+- Chasse à l'angle mort (ce qui a été trouvé, et par qui) : pas d'échange de poste avec un voisin. Trouvé par le script d'essai sur la version 4 : le champ n'a aucune limite, un message de 500 caractères est accepté tel quel ; il passe à la ligne à 360 px sans faire défiler la page. `<b>gras</b>`, le rechargement et la fenêtre à 360 px ne cassent rien. Deux messages très rapides : non essayé.
+- Deux phrases de conclusion : aucune des trois modifications n'a cassé un comportement de la liste ; la plus risquée était la mémoire (version 3), qui a changé la façon d'ajouter chaque message. Sans la liste de contrôle, on n'aurait testé que la nouveauté, et une régression sur l'envoi ou sur `<b>gras</b>` serait passée sans être vue.
 - Difficulté qui reste :
 
 ### J1-04 · 🎲 Même prompt, autre réponse — [fiche](checkpoints/J1-04-meme-prompt.md)
 
-- [ ] Validé
+- [x] Validé
 - Le prompt de référence (identique aux trois essais) :
 
   > Fais-moi un chatbot pour un club sportif amateur qui recommande des séances selon chaque personne, dans une seule page HTML que j'ouvre dans mon navigateur.
@@ -279,13 +290,13 @@ Pour chaque checkpoint : cochez la case quand toute la preuve de la fiche est r�
   | Critère | A | B | C |
   |---|---|---|---|
   | Structure du code (fichiers, longueur, place du script) | 1 fichier, 971 lignes, un seul script en bas de page (ligne 323) | 1 fichier, 844 lignes, un seul script en bas de page (ligne 235) | 1 fichier, 1116 lignes, un seul script en bas de page (ligne 344) |
-  | Comportement à l'envoi (que répond le bot, sur quel thème) | | | |
-  | Ce qui manque (message vide, mémoire, bouton effacer…) | | | |
+  | Comportement à l'envoi (que répond le bot, sur quel thème) | À « Je suis débutant, quelle séance me conseilles-tu ? » : « Enchanté Débutant quelle ! Tu as quel âge ? ». Il prend la phrase pour un prénom. Dix questions annoncées. | Même message : « Noté : débutant ou reprise. ». Il reconnaît le niveau. | Même message : « Enchanté, Débutant Quelle ! Tu es dans quelle tranche d'âge ? ». Il prend la phrase pour un prénom. Huit questions annoncées. |
+  | Ce qui manque (message vide, mémoire, bouton effacer…) | Message vide : rien, sans explication. Après F5 : 30 lignes affichées sur 38. Hors thème : « Donne-moi ton âge en chiffres ». Champ limité à 200 caractères. | Message vide : rien, sans explication. Après F5 : 28 lignes sur 37. Hors thème : « Je n'ai pas reconnu de prénom ». Champ limité à 300. Boutons « Nouvelle personne » et « Supprimer cette fiche ». | Message vide : rien, sans explication. Après F5 : 6 lignes sur 18, la conversation repart du début. Hors thème : « Je n'ai pas bien saisi ». Champ limité à 200. Bouton « Changer de personne ». |
   | Ce qui diffère (noms, textes, réponses, ton) | Titre « Coach du club » ; `innerHTML` utilisé 0 fois | Titre « Conseiller de séances » ; `innerHTML` utilisé 10 fois | Titre « Assistant séances du club » ; `innerHTML` utilisé 3 fois |
 
-  Pour comparaison, `chatbot-v1.html` (J1-02, même prompt) fait 184 lignes.
+  Pour comparaison, `chatbot-v1.html` (J1-02, même prompt) fait 184 lignes. Les trois pages s'ouvrent sans erreur, n'ont pas de défilement horizontal à 360 px et affichent `<b>gras</b>` avec ses chevrons. Les trois inventent le même club, « AS Les Tilleuls », et demandent un prénom ou un âge, ce que le prompt ne demandait pas. (essais faits dans un navigateur de test piloté par script, pas à la main).
 
-- Une phrase de conclusion (ce que ces écarts autorisent, ce qu'ils interdisent de supposer) :
+- Une phrase de conclusion (ce que ces écarts autorisent, ce qu'ils interdisent de supposer) : on peut compter sur une page qui s'ouvre et qui parle de séances, mais pas sur sa taille (184 à 1116 lignes), ni sur ce qu'elle demande à la personne, ni sur sa mémoire, ni sur sa façon de comprendre la première phrase : une seule réponse ne dit pas ce que « le chat » fait, il faut le vérifier à chaque fois.
 - Difficulté qui reste :
 
 ## L'agent (N1 Demander)
@@ -371,7 +382,7 @@ Pour chaque checkpoint : cochez la case quand toute la preuve de la fiche est r�
 
 ### J1-06 · 🧱 Anatomie d'un prompt — [fiche](checkpoints/J1-06-anatomie-dun-prompt.md)
 
-- [ ] Validé
+- [x] Validé
 - Preuve (deux prompts, deux résultats, grille remplie, commit du squelette) : Les deux prompts ont été envoyés à `dsh` depuis `atelier` avec `dsh --profile headless`. Pour laisser l'agent écrire, le réglage `defaultPreset` de `settings.yaml` est passé de `read-only` à `workspace-write` (écriture limitée au dossier `atelier`).
 - Prompt vague et ce que montre la page (trois lignes, fichiers touchés) :
 
@@ -431,7 +442,7 @@ CRITÈRE D'ARRÊT : app.js empêche seulement le rechargement de la page à l'en
 
 ### J1-07 · 👣 Petits pas — [fiche](checkpoints/J1-07-petits-pas.md)
 
-- [ ] Validé
+- [x] Validé
 - Preuve (découpage écrit avant la première demande, trois diffs relus, un refus écrit, un commit par étape acceptée, trois boutons de questions qui fonctionnent) :
 - La tâche, mes trois questions et mon découpage en trois étapes (écrit avant la première demande d'écriture) :
 
@@ -467,7 +478,7 @@ CRITÈRE D'ARRÊT : app.js empêche seulement le rechargement de la page à l'en
 
 ### J1-08 · 🔎 Revue de la page — [fiche](checkpoints/J1-08-revue-de-la-page.md)
 
-- [ ] Validé
+- [x] Validé
 - Preuve (trois défauts, un corrigé avec son avant et son après, diff relu, revue adverse vérifiée) :
 - Mes défauts, un par ligne :
 
@@ -511,7 +522,7 @@ CRITÈRE D'ARRÊT : quand ce seul défaut est corrigé, tu t'arrêtes.
 
 ### J1-09 · 🧠 Un cerveau à règles, par prompts — [fiche](checkpoints/J1-09-cerveau-a-regles.md)
 
-- [ ] Validé
+- [x] Validé
 - Preuve (comportements vérifiés : « Vous : … », message vide, `<b>gras</b>`, mes deux mots, ma limite ; `/js/brain.js` et `/js/view.js` affichés ; F5 ; « Effacer ») : tout est vérifié, détail dans les lignes 5 à 10 du journal. `/js/app.js`, `/js/brain.js` et `/js/view.js` répondent 200. Dans la page, `validateMessage('a'.repeat(320)).ok` vaut `true` et avec 321 `false`. Aucune erreur dans la console, aucun défilement horizontal à 360, 768 et 1280 px. Vérifications faites dans un navigateur de test piloté par script (Chromium), pas à la main. Un commit par demande acceptée.
 - Mes six demandes et leurs verdicts : dans le journal des décisions ci-dessus.
 - Le rôle de chaque fichier, en une phrase chacun :
@@ -533,15 +544,15 @@ CRITÈRE D'ARRÊT : quand ce seul défaut est corrigé, tu t'arrêtes.
 
 ## Quatre questions pour finir
 
-1. Pourquoi `textContent` et pas `innerHTML` ?
-2. Pourquoi trois fichiers plutôt qu'un seul ?
-3. L'agent a écrit le code : comment savez-vous qu'il est juste, et qu'est-ce qui l'a vu échouer ?
-4. Quelle astuce avez-vous le plus utilisée aujourd'hui, et laquelle avez-vous oubliée ?
+1. Pourquoi `textContent` et pas `innerHTML` ? `textContent` écrit le message comme du texte : `<b>gras</b>` s'affiche avec ses chevrons. `innerHTML` le lirait comme du HTML, et un message contenant une balise pourrait changer la page ou y lancer du code. Vérifié : 0 balise `b` dans la page après l'envoi de `<b>gras</b>`.
+2. Pourquoi trois fichiers plutôt qu'un seul ? Chacun a un seul rôle : `brain.js` les règles, `view.js` l'affichage, `app.js` le lien avec la page et la mémoire. `brain.js` ne touche pas à `document`, donc `npm test` peut le tester sans navigateur, et un diff qui ne touche qu'un fichier se relit plus vite.
+3. L'agent a écrit le code : comment savez-vous qu'il est juste, et qu'est-ce qui l'a vu échouer ? Chaque diff a été relu puis essayé dans la page avant le commit, et `npm test` passe à 14 sur 14. Deux contrôles ont vu le code échouer : `node --check` a trouvé l'erreur de syntaxe de l'agent dans `brain.js` (demande 7 du journal), et le test de la limite est devenu rouge quand la limite est passée de 320 à 330.
+4. Quelle astuce avez-vous le plus utilisée aujourd'hui, et laquelle avez-vous oubliée ? La plus utilisée : l'astuce 2, un changement par demande et un diff relu (dix demandes, dix diffs). La moins utilisée : l'astuce 6, relancer trois fois le même prompt, faite seulement en J1-04 et pas avec `dsh`.
 
 ## Aides utilisées
 
-- Indices, aide-mémoire, voisins :
-- Ce que j'ai demandé à une IA, et comment j'ai vérifié sa réponse :
+- Indices, aide-mémoire, voisins : les fiches des checkpoints et la notice `dsh` (tableau « Si ça bloque » pour l'erreur de `.credentials.yaml`). Pas d'échange avec un binôme voisin.
+- Ce que j'ai demandé à une IA, et comment j'ai vérifié sa réponse : un assistant IA de code a tenu le rôle du chat pour J1-02 à J1-04, puis a envoyé les demandes à `dsh`, relu les diffs, lancé les tests et rédigé ce carnet, à notre demande. Vérifications : `git diff` avant chaque commit, `npm test`, `node --check`, et des essais de la page dans un navigateur de test (Chromium). Ce qui reste à faire par nous : relire le code, les notes personnelles et l'épreuve de l'explication.
 
 ## Notes personnelles (chacun)
 
