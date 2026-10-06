@@ -372,12 +372,61 @@ Pour chaque checkpoint : cochez la case quand toute la preuve de la fiche est r�
 ### J1-06 · 🧱 Anatomie d'un prompt — [fiche](checkpoints/J1-06-anatomie-dun-prompt.md)
 
 - [ ] Validé
-- Preuve (deux prompts, deux résultats, grille remplie, commit du squelette) :
+- Preuve (deux prompts, deux résultats, grille remplie, commit du squelette) : Les deux prompts ont été envoyés à `dsh` depuis `atelier` avec `dsh --profile headless`. Pour laisser l'agent écrire, le réglage `defaultPreset` de `settings.yaml` est passé de `read-only` à `workspace-write` (écriture limitée au dossier `atelier`).
 - Prompt vague et ce que montre la page (trois lignes, fichiers touchés) :
+
+  > Écris la page de Cap Web : un formulaire, une liste de messages et un statut.
+
+  - Fichiers touchés : `public/index.html` (37 lignes), `public/js/app.js` (39 lignes), `public/styles.css` (15 lignes) ; 74 lignes ajoutées, 3 retirées. Aucun fichier nouveau.
+  - La page contient un formulaire `form#form-message` avec un champ `#champ-message` limité à 280 caractères, un titre « Messages », une liste `ul#messages` et le `p#status`.
+  - L'agent a ajouté ce que personne n'avait demandé : l'envoi ajoute déjà le message à la liste, le statut compte les messages, un message vide est refusé. Les identifiants et la limite sont ceux qu'il a choisis, pas les nôtres.
+  - Dossier remis à zéro ensuite avec `git restore` sur les trois fichiers.
+
 - Prompt structuré, en six parties, tel qu'envoyé :
+
+```text
+RÔLE : Tu es développeur web. Tu écris du HTML, du CSS et du JavaScript sans bibliothèque, pour des débutants.
+TÂCHE : Écris le squelette de la page de « Cap Web », un assistant pour les adhérents d'un club sportif amateur, qui recommande des séances selon chaque personne : un formulaire, une liste de messages, une ligne de statut.
+CONTRAINTES :
+- Modifie uniquement public/index.html, public/styles.css et public/js/app.js. Le serveur ne sert que ces trois fichiers : n'en crée aucun autre.
+- Garde ces identifiants : form#chat-form, textarea#message, ul#messages, p#status.
+- Le champ #message est limité à 320 caractères (maxlength).
+- Le contenu de la page est dans un main. Un seul h1 (« Cap Web »), un label lié au champ, un bouton « Envoyer », p#status avec role="status", html lang="fr". Aucune bibliothèque, aucune adresse https://.
+FORMAT DE SORTIE : d'abord la liste de tes hypothèses (cinq au plus), puis tu t'arrêtes. Après mon « ok », tu écris les trois fichiers, puis tu réponds par la liste des fichiers écrits.
+EXEMPLES ET CONTRE-EXEMPLES : voulu : <button type="submit">Envoyer</button>. Refusé : <div onclick="envoyer()">Envoyer</div> (ce n'est pas un bouton) ; un fichier script.js à côté de app.js (le serveur répondrait 404).
+CRITÈRE D'ARRÊT : app.js empêche seulement le rechargement de la page à l'envoi et écrit alors « Interface prête. » dans le statut ; il n'ajoute aucun message à la liste. Quand les trois fichiers sont écrits, tu t'arrêtes.
+```
+
 - Les hypothèses de l'agent, et ma réponse :
+
+  > Hypothèses :
+  > 1. Le serveur sert `public/` comme racine statique et `public/index.html` comme page d'accueil.
+  > 2. Les trois fichiers existent déjà ou peuvent être écrasés sans perdre de contenu à préserver.
+  > 3. Aucun style ou comportement n'est attendu au-delà du squelette décrit (formulaire, liste, statut).
+  > 4. Le statut initial de `p#status` peut être vide avant l'envoi du formulaire.
+
+  Après cette liste, `git status -- atelier` ne montrait aucun changement : l'agent n'a rien écrit avant le « ok ».
+
+  Ma réponse :
+
+  > ok. Une correction sur l'hypothèse 1 : le serveur ne sert pas tout le dossier public/, seulement une liste de quatre adresses (/, /index.html, /styles.css, /js/app.js). Un autre fichier donnerait un 404. Les hypothèses 2, 3 et 4 sont justes. Écris maintenant les trois fichiers.
+
+  Le mode `headless` ne garde pas la conversation : la réponse a été envoyée dans une seconde commande qui reprenait le prompt et la liste d'hypothèses. L'agent a alors écrit les trois fichiers et répondu par leur liste.
+
 - La grille (✔ ou ✘ et un mot, pour « vague » puis « structuré ») :
-- Une phrase : entre les deux résultats, ce qui a le plus changé, c'est… parce que la partie… de mon prompt disait…
+
+  | Critère | Prompt vague | Prompt structuré |
+  |---|---|---|
+  | La page s'affiche sans erreur (F12, onglet Console) | non vérifié dans le navigateur ; `node --check` ne trouve pas d'erreur de syntaxe | ✔ aucune erreur, vérifié dans un navigateur de test (Chromium) ; après « Envoyer », le statut affiche « Interface prête. » et la liste reste vide |
+  | Formulaire, liste et statut sont là, avec les quatre identifiants | ✘ deux sur quatre : `form-message` et `champ-message` au lieu de `chat-form` et `message` | ✔ `chat-form`, `message`, `messages`, `status` |
+  | Seuls les trois fichiers autorisés ont changé (`git status -- atelier`) | ✔ trois fichiers modifiés, aucun nouveau | ✔ trois fichiers modifiés, aucun nouveau |
+  | `npm test` reste vert | ✔ 9 sur 9 | ✔ 9 sur 9 |
+  | Aucune bibliothèque, aucune adresse `https://` | ✔ aucune | ✔ aucune |
+  | Vous savez expliquer chaque partie de la page en une phrase | | |
+
+  Changement non demandé dans le résultat structuré : la balise `<script type="module">` est devenue `<script>` sans `type`, et le titre de l'onglet « Cap Web — départ » est devenu « Cap Web ».
+
+- Une phrase : entre les deux résultats, ce qui a le plus changé, c'est… parce que la partie… de mon prompt disait… Entre les deux résultats, ce qui a le plus changé, c'est la taille et le périmètre du code (`app.js` passe de 39 lignes à 7, sans ajout de messages ni compteur) et les identifiants, parce que la partie CONTRAINTES de mon prompt donnait les quatre identifiants et la limite de 320, et que la partie CRITÈRE D'ARRÊT disait que `app.js` ne fait qu'empêcher le rechargement et écrire « Interface prête. ».
 - Difficulté qui reste :
 
 ### J1-07 · 👣 Petits pas — [fiche](checkpoints/J1-07-petits-pas.md)
