@@ -4,7 +4,7 @@ export function validateMessage(raw) {
   }
   const value = raw.trim();
   if (value === '') {
-    return { ok: false, error: 'Veuillez saisir un message avant de envoyer.' };
+    return { ok: false, error: "Veuillez saisir un message avant d'envoyer." };
   }
   return { ok: true, value };
 }
