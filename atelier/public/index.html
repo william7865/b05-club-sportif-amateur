@@ -3,15 +3,21 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Cap Web — départ</title>
+  <title>Cap Web</title>
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
   <main>
     <h1>Cap Web</h1>
-    <p>Le serveur fonctionne. Aujourd’hui, nous construisons notre interface.</p>
+    <p>Un assistant pour les adhérents du club : il recommande des séances selon chaque personne.</p>
+    <ul id="messages"></ul>
+    <form id="chat-form">
+      <label for="message">Votre message</label>
+      <textarea id="message" name="message" maxlength="320" rows="3"></textarea>
+      <button type="submit">Envoyer</button>
+    </form>
     <p id="status" role="status"></p>
   </main>
-  <script type="module" src="./js/app.js"></script>
+  <script src="./js/app.js"></script>
 </body>
 </html>
