@@ -457,7 +457,7 @@ CRITÈRE D'ARRÊT : app.js empêche seulement le rechargement de la page à l'en
 | 1 | « Étape 1 seulement : dans public/index.html, sous le formulaire, ajoute une liste ul#suggestions de trois boutons type="button", un par question : « Quelle séance me conseilles-tu pour mon niveau ? », « Quelles séances sont prévues cette semaine ? », « Comment m'échauffer avant une séance ? ». Aucun JavaScript, aucun autre fichier, aucun autre changement. » | `index.html` seul, 5 lignes ajoutées : `ul#suggestions` avec trois `li > button type="button"`. Rien de non demandé. | Accepté. Les trois boutons s'affichent avec le bon texte ; un clic ne fait rien (champ vide, statut vide). Commit « J1 : étape 1, boutons de questions ». |
 | 2 | « Étape 2 seulement : dans public/js/app.js, un clic sur un bouton de ul#suggestions copie le texte de ce bouton dans le champ #message. Rien n'est envoyé. Aucun autre fichier, aucun autre changement. » | `app.js` seul, 8 lignes ajoutées. Non demandé : trois protections (`?.`, `contains`, `if (messageInput)`). | Refusé en partie (voir « Mon refus écrit »), puis accepté après correction : 7 lignes ajoutées. Le clic copie la question, le statut ne change pas, rien n'est envoyé. Commit « J1 : étape 2, un clic copie la question dans le champ ». |
 | 3 | « Étape 3 seulement : dans public/js/app.js, après le clic sur un bouton de ul#suggestions, mets le curseur dans le champ #message et écris dans p#status « Question copiée : modifiez-la ou envoyez-la. ». Aucun autre fichier, aucun autre changement, aucune protection en plus. » | `app.js` seul, 2 lignes ajoutées : `messageInput.focus()` et le texte du statut. Rien de non demandé. | Accepté. Après le clic, le curseur est dans `#message` et le statut dit « Question copiée : modifiez-la ou envoyez-la. ». `npm test` 9 sur 9. Commit « J1 : étape 3, curseur dans le champ et statut ». |
-| 4 | | | |
+| 4 | Demande ciblée de J1-08 en six parties : corriger le dépassement de 183 px à 360 px, dans `styles.css` seulement | `styles.css` seul, 4 lignes ajoutées (`overflow-wrap: break-word` sur `#messages li`). Rien de non demandé. | Accepté. Dépassement mesuré : 183 px avant, 0 px après. |
 | 5 | | | |
 | 6 | | | |
 | 7 | | | |
@@ -473,12 +473,40 @@ CRITÈRE D'ARRÊT : app.js empêche seulement le rechargement de la page à l'en
 
   | Lentille (structure, clavier, écrans) | Où (élément ou fichier) | Comment je l'ai vu |
   |---|---|---|
-  | | | |
-  | | | |
-  | | | |
+  | Structure | `ul#messages`, `index.html` ligne 13 : la liste des messages n'a pas de nom (ni `aria-label`, ni titre) | Lecture du HTML ; `getAttribute('aria-label')` renvoie `null` |
+  | Structure | `index.html` lignes 10 à 25 : un seul titre (`h1`), aucun `h2`, et pas de repère `header`, `section` ni `footer` (seul `main` existe) | Compté dans la page : `h1` = 1, `h2` = 0, `header` = 0, `section` = 0, `footer` = 0 |
+  | Écrans | `ul#messages` dans `styles.css` : à 360 px, un message avec un mot de 60 lettres fait dépasser la page de 183 px (223 px à 320 px) | `<li>` ajouté à la main dans la liste, puis `scrollWidth - clientWidth` mesuré dans un navigateur de test |
+  | Écrans | Bouton « Envoyer » : 21 px de haut à toutes les largeurs, et 768 px de large à 1280 px | Taille mesurée avec `getBoundingClientRect()` à 360, 768 et 1280 px |
+
+  Lentille clavier : aucun défaut trouvé. Tab passe par le champ, « Envoyer », puis les trois questions ; le focus se voit sur chacun (contour par défaut du navigateur) ; Entrée dans le champ ajoute une ligne sans envoyer ; Entrée sur « Envoyer » affiche « Interface prête. » sans changer l'adresse ; Espace sur une question la copie sans l'envoyer. Le clic sur l'étiquette met bien le curseur dans le champ.
+
+  Ces mesures ont été faites dans un navigateur de test piloté par script (Chromium), pas à la main avec F12.
 
 - La revue adverse : trois affirmations de l'agent, la référence qu'il a donnée (fichier, ligne), mon verdict (vrai, faux, rejeté sans référence) et comment j'ai vérifié :
+
+  Demande : « Tu relis public/index.html et public/styles.css sans rien modifier. Trouve trois façons dont la page casse (structure, clavier, écrans de 360 à 1280 px). Pour chacune : fichier et ligne, comment le voir, ce qu'on verra. Si tu n'es pas sûr, écris "je ne sais pas". » Après la réponse, `git status` ne montrait aucun changement.
+
+  | Affirmation de l'agent | Référence donnée | Verdict | Comment vérifié |
+  |---|---|---|---|
+  | Structure : un seul titre, aucun `h2`, les deux listes et le statut ne sont pas nommés | `index.html` lignes 10 à 24 | Vrai | Titres comptés dans la page : un `h1`, zéro `h2` ; `aria-label` absent sur les deux listes |
+  | Clavier : « focus invisible », aucune règle `:focus` dans le CSS | `styles.css` lignes 1 à 21, `index.html` lignes 16-17 et 20-22 | Faux | Il n'y a bien aucune règle `:focus`, mais le contour par défaut du navigateur s'affiche sur le champ et les quatre boutons (`outline-style: auto` mesuré sur chacun) |
+  | Écrans : à 360 px les boutons de questions « débordent » ; à 1280 px le bouton « Envoyer » fait 768 px de large | `styles.css` lignes 1-6, 8-11, 18-21 | Faux pour 360 px, vrai pour 1280 px | À 360 px, dépassement mesuré = 0 : les boutons passent sur deux lignes (256 × 36 px). À 1280 px, « Envoyer » mesure bien 768 px de large |
+
 - Le défaut corrigé : l'avant (capture ou valeur), ma demande ciblée (copiée), le diff relu (fichiers, lignes, changement non demandé ?), l'après (même geste, même mesure) :
+  - Avant : à 360 px, avec un `<li>` contenant un mot de 60 lettres, `scrollWidth - clientWidth` = 183.
+  - Demande ciblée :
+
+```text
+RÔLE : Tu es développeur web, tu corriges du CSS sans bibliothèque.
+TÂCHE : À 360 px de large, un message contenant un mot de 60 lettres dans ul#messages fait dépasser la page de 183 px sur le côté. Corrige ce seul défaut.
+CONTRAINTES : ne modifie que public/styles.css. Pas d'overflow: hidden sur html ou body. Ne touche à aucune autre règle.
+FORMAT DE SORTIE : le diff, puis une phrase sur la façon de vérifier.
+CONTRE-EXEMPLE : le défaut lui-même : <li>Vous : aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa</li> dans ul#messages, à 360 px, donne document.documentElement.scrollWidth - document.documentElement.clientWidth = 183 au lieu de 0.
+CRITÈRE D'ARRÊT : quand ce seul défaut est corrigé, tu t'arrêtes.
+```
+
+  - Diff relu : un seul fichier, `styles.css`, 4 lignes ajoutées (une règle `#messages li { overflow-wrap: break-word; }`). Aucun changement non demandé, pas d'`overflow: hidden`.
+  - Après, même geste : 0 à 360 px (et 0 à 320, 768 et 1280 px). Commit « J1 : correction, mot très long qui dépasse à 360 px ».
 - Difficulté qui reste :
 
 ### J1-09 · 🧠 Un cerveau à règles, par prompts — [fiche](checkpoints/J1-09-cerveau-a-regles.md)
