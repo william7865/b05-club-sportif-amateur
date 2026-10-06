@@ -434,17 +434,29 @@ CRITÈRE D'ARRÊT : app.js empêche seulement le rechargement de la page à l'en
 - [ ] Validé
 - Preuve (découpage écrit avant la première demande, trois diffs relus, un refus écrit, un commit par étape acceptée, trois boutons de questions qui fonctionnent) :
 - La tâche, mes trois questions et mon découpage en trois étapes (écrit avant la première demande d'écriture) :
-- Ce que l'agent a proposé comme découpage, ce que j'ai gardé, pourquoi :
+
+  - Tâche : afficher sous le formulaire nos trois questions en boutons ; un clic copie la question dans le champ, sans l'envoyer.
+  - Questions : « Quelle séance me conseilles-tu pour mon niveau ? », « Quelles séances sont prévues cette semaine ? », « Comment m'échauffer avant une séance ? ».
+  - Étape 1 : dans `index.html` seulement, une liste `ul#suggestions` de trois boutons `type="button"`, écrits dans le HTML.
+  - Étape 2 : dans `app.js` seulement, un clic copie le texte du bouton dans le champ.
+  - Étape 3 : après le clic, le curseur est dans le champ et le statut dit « Question copiée : modifiez-la ou envoyez-la. »
+
+- Ce que l'agent a proposé comme découpage, ce que j'ai gardé, pourquoi : L'agent a listé 11 hypothèses sans rien écrire (`git status -- atelier` vide) et a proposé de fusionner les étapes 2 et 3, « car ce sont 3-4 lignes dans le même écouteur ». Découpage en trois gardé : chaque étape se teste seule en trente secondes, et l'étape 2 sans statut permet de vérifier que rien n'est envoyé.
 - Mon refus écrit : ce que l'agent avait fait, pourquoi je le refuse, ce que j'ai demandé à la place :
+  - Ce que l'agent avait fait (étape 2) : en plus de la copie, trois protections non demandées dans `app.js` : `suggestions?.addEventListener`, `!suggestions.contains(button)` et `if (messageInput)`.
+  - Pourquoi refusé : `ul#suggestions` et `#message` sont écrits dans `index.html`. Avec ces protections, un identifiant faux donnerait un clic qui ne fait rien, sans erreur dans la console. Et ce sont trois morceaux de code de plus à savoir expliquer.
+  - Demandé à la place : « Je refuse une partie de ton changement de l'étape 2 dans public/js/app.js. Tu as ajouté trois protections que je n'ai pas demandées : « suggestions?. », « !suggestions.contains(button) » et « if (messageInput) ». Les éléments ul#suggestions et #message sont écrits dans index.html : si un identifiant est faux, je veux une erreur visible dans la console, pas un clic qui ne fait rien en silence. Retire seulement ces trois protections. Garde le reste tel quel : un seul écouteur de clic sur ul#suggestions, qui copie le texte du bouton cliqué dans #message. Aucun autre fichier, aucun autre changement. »
+  - Résultat : nouveau diff relu, les trois protections ont disparu, le reste est identique, le clic copie toujours la question.
+
 - Difficulté qui reste :
 
 **Journal des décisions.** Une ligne par demande faite à l'agent, de J1-07 à J1-09 (les trois étapes de J1-07, puis la correction de J1-08, puis les six demandes de J1-09) : la demande copiée, le diff relu (fichiers, nombre de lignes, une chose que je n'avais pas demandée ?), le verdict et pourquoi.
 
 | N° | Demande | Diff relu | Verdict et pourquoi |
 |---|---|---|---|
-| 1 | | | |
-| 2 | | | |
-| 3 | | | |
+| 1 | « Étape 1 seulement : dans public/index.html, sous le formulaire, ajoute une liste ul#suggestions de trois boutons type="button", un par question : « Quelle séance me conseilles-tu pour mon niveau ? », « Quelles séances sont prévues cette semaine ? », « Comment m'échauffer avant une séance ? ». Aucun JavaScript, aucun autre fichier, aucun autre changement. » | `index.html` seul, 5 lignes ajoutées : `ul#suggestions` avec trois `li > button type="button"`. Rien de non demandé. | Accepté. Les trois boutons s'affichent avec le bon texte ; un clic ne fait rien (champ vide, statut vide). Commit « J1 : étape 1, boutons de questions ». |
+| 2 | « Étape 2 seulement : dans public/js/app.js, un clic sur un bouton de ul#suggestions copie le texte de ce bouton dans le champ #message. Rien n'est envoyé. Aucun autre fichier, aucun autre changement. » | `app.js` seul, 8 lignes ajoutées. Non demandé : trois protections (`?.`, `contains`, `if (messageInput)`). | Refusé en partie (voir « Mon refus écrit »), puis accepté après correction : 7 lignes ajoutées. Le clic copie la question, le statut ne change pas, rien n'est envoyé. Commit « J1 : étape 2, un clic copie la question dans le champ ». |
+| 3 | « Étape 3 seulement : dans public/js/app.js, après le clic sur un bouton de ul#suggestions, mets le curseur dans le champ #message et écris dans p#status « Question copiée : modifiez-la ou envoyez-la. ». Aucun autre fichier, aucun autre changement, aucune protection en plus. » | `app.js` seul, 2 lignes ajoutées : `messageInput.focus()` et le texte du statut. Rien de non demandé. | Accepté. Après le clic, le curseur est dans `#message` et le statut dit « Question copiée : modifiez-la ou envoyez-la. ». `npm test` 9 sur 9. Commit « J1 : étape 3, curseur dans le champ et statut ». |
 | 4 | | | |
 | 5 | | | |
 | 6 | | | |
