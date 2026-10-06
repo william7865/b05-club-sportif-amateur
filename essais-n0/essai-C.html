@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Assistant séances du club</title>
+<style>
+  :root {
+    --bg: #f3efe6;
+    --surface: #fffdf8;
+    --surface-2: #ebe5d7;
+    --ink: #17251e;
+    --muted: #5a685f;
+    --line: #d6cebd;
+    --green: #1d5a43;
+    --on-green: #ffffff;
+    --accent: #c8421f;
+    --focus: #0b6bcb;
+    --display: "Avenir Next Condensed", "Barlow Condensed", "Roboto Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+    --text: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1714;
+      --surface: #18231e;
+      --surface-2: #223029;
+      --ink: #ecefe9;
+      --muted: #9daba3;
+      --line: #2e3e36;
+      --green: #2c7a5c;
+      --on-green: #ffffff;
+      --accent: #f2775a;
+      --focus: #7fb8ff;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.5 var(--text);
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
+    -webkit-font-smoothing: antialiased;
+  }
+  button, input { font: inherit; color: inherit; }
+  :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+  /* ---------- En-tête ---------- */
+  .entete {
+    flex: none;
+    border-bottom: 1px solid var(--line);
+    background: var(--surface);
+  }
+  .entete-in {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .blason { flex: none; width: 40px; height: 46px; color: var(--green); }
+  .titres { flex: 1; min-width: 0; }
+  .club {
+    margin: 0;
+    font: 700 22px/1.05 var(--display);
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .sous {
+    margin: 2px 0 0;
+    font-size: 13px;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .sous b { color: var(--ink); font-weight: 600; }
+  .btn-leger {
+    flex: none;
+    background: transparent;
+    border: 1.5px solid var(--line);
+    border-radius: 999px;
+    padding: 8px 14px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .btn-leger:hover { border-color: var(--ink); }
+
+  /* ---------- Fil de discussion ---------- */
+  .fil {
+    flex: 1;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scroll-behavior: smooth;
+  }
+  .fil-in {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 20px 16px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .msg {
+    max-width: min(88%, 600px);
+    padding: 10px 14px;
+    border-radius: 16px;
+    overflow-wrap: anywhere;
+    animation: arrive .22s ease-out both;
+  }
+  .msg p { margin: 0; }
+  .msg p + p { margin-top: 8px; }
+  .msg.bot {
+    align-self: flex-start;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-bottom-left-radius: 4px;
+  }
+  .msg.moi {
+    align-self: flex-end;
+    background: var(--green);
+    color: var(--on-green);
+    border-bottom-right-radius: 4px;
+  }
+  .msg.large { max-width: 100%; width: 100%; padding: 14px; }
+  .petit { font-size: 14px; color: var(--muted); }
+  @keyframes arrive {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  .ecrit { display: inline-flex; gap: 4px; padding: 6px 2px; }
+  .ecrit i {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--muted);
+    animation: rebond 1s infinite ease-in-out;
+  }
+  .ecrit i:nth-child(2) { animation-delay: .15s; }
+  .ecrit i:nth-child(3) { animation-delay: .3s; }
+  @keyframes rebond {
+    0%, 60%, 100% { transform: none; opacity: .45; }
+    30% { transform: translateY(-4px); opacity: 1; }
+  }
+
+  /* ---------- Fiches séance ---------- */
+  .semaine { list-style: none; margin: 12px 0; padding: 0; display: grid; gap: 10px; }
+  .seance {
+    display: grid;
+    grid-template-columns: 76px 1fr;
+    gap: 14px;
+    align-items: start;
+    padding: 12px;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+  }
+  /* le créneau est présenté comme un dossard épinglé */
+  .dossard {
+    position: relative;
+    text-align: center;
+    padding: 12px 4px 10px;
+    border: 2px solid var(--ink);
+    border-radius: 6px;
+    background:
+      radial-gradient(circle at 7px 7px, var(--ink) 1.6px, transparent 2.2px),
+      radial-gradient(circle at calc(100% - 7px) 7px, var(--ink) 1.6px, transparent 2.2px),
+      radial-gradient(circle at 7px calc(100% - 7px), var(--ink) 1.6px, transparent 2.2px),
+      radial-gradient(circle at calc(100% - 7px) calc(100% - 7px), var(--ink) 1.6px, transparent 2.2px),
+      var(--surface);
+  }
+  .dossard .jour {
+    display: block;
+    font: 700 26px/1 var(--display);
+    letter-spacing: .06em;
+    color: var(--accent);
+  }
+  .dossard .heure {
+    display: block;
+    margin-top: 4px;
+    font-size: 13px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .seance h3 {
+    margin: 0;
+    font: 700 20px/1.15 var(--display);
+    letter-spacing: .02em;
+    text-wrap: balance;
+  }
+  .seance .meta { margin: 3px 0 0; font-size: 14px; color: var(--muted); }
+  .seance .desc { margin: 6px 0 0; font-size: 15px; }
+  .seance .pourquoi {
+    margin: 10px 0 0;
+    padding-top: 8px;
+    border-top: 1px dashed var(--line);
+    font-size: 14px;
+  }
+  .intensite {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 6px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .barres { display: inline-flex; gap: 3px; align-items: flex-end; height: 12px; }
+  .barres i { width: 5px; border-radius: 1px; background: var(--line); }
+  .barres i:nth-child(1) { height: 5px; }
+  .barres i:nth-child(2) { height: 8px; }
+  .barres i:nth-child(3) { height: 12px; }
+  .barres i.on { background: var(--accent); }
+
+  .planning { margin: 8px 0 0; padding: 0; list-style: none; }
+  .planning li { padding: 8px 0; border-top: 1px solid var(--line); }
+  .planning .pj {
+    font: 700 15px/1 var(--display);
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .planning .ligne { display: flex; gap: 10px; font-size: 15px; margin-top: 4px; }
+  .planning .ph { flex: none; width: 52px; font-variant-numeric: tabular-nums; color: var(--muted); }
+
+  /* ---------- Zone de réponse ---------- */
+  .bas {
+    flex: none;
+    border-top: 1px solid var(--line);
+    background: var(--surface);
+  }
+  .bas-in {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+  }
+  .choix { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+  .choix[hidden] { display: none; }
+  .puce {
+    min-height: 40px;
+    padding: 8px 14px;
+    border: 1.5px solid var(--green);
+    border-radius: 999px;
+    background: transparent;
+    cursor: pointer;
+    font-size: 15px;
+    transition: background-color .12s, color .12s;
+  }
+  .puce:hover { background: var(--surface-2); }
+  .puce[aria-pressed="true"] { background: var(--green); color: var(--on-green); }
+  .puce.valider {
+    background: var(--ink);
+    border-color: var(--ink);
+    color: var(--bg);
+    font-weight: 600;
+  }
+  .puce.valider:disabled { opacity: .4; cursor: not-allowed; }
+  .saisie { display: flex; gap: 8px; }
+  .saisie input {
+    flex: 1;
+    min-width: 0;
+    height: 46px;
+    padding: 0 16px;
+    border: 1.5px solid var(--line);
+    border-radius: 999px;
+    background: var(--bg);
+  }
+  .saisie input::placeholder { color: var(--muted); }
+  .saisie input:focus { border-color: var(--green); outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--green) 30%, transparent); }
+  .envoyer {
+    flex: none;
+    width: 46px; height: 46px;
+    border: 0;
+    border-radius: 50%;
+    background: var(--green);
+    color: var(--on-green);
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+  }
+  .envoyer:hover { filter: brightness(1.1); }
+  .note { margin: 8px 0 0; font-size: 12px; color: var(--muted); text-align: center; }
+  .note:empty { display: none; }
+
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+  @media (max-width: 480px) {
+    .club { font-size: 19px; }
+    .btn-leger { padding: 8px 10px; font-size: 13px; }
+    .seance { grid-template-columns: 64px 1fr; gap: 10px; padding: 10px; }
+    .dossard .jour { font-size: 22px; }
+    .msg { max-width: 94%; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .fil { scroll-behavior: auto; }
+    .msg, .ecrit i { animation: none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="entete">
+  <div class="entete-in">
+    <svg class="blason" viewBox="0 0 40 46" aria-hidden="true">
+      <path d="M20 1.5 37.5 7v15.5c0 10.4-7 17.6-17.5 22-10.500-4.400-17.500-11.600-17.500-22V7z" fill="currentColor"/>
+      <path d="M11 27.500l6-9 5 5.500 4-8.500 4 12" fill="none" stroke="#fff" stroke-width="2.600" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="27.500" cy="11" r="2.400" fill="#fff"/>
+    </svg>
+    <div class="titres">
+      <h1 class="club" id="nomClub">Le club</h1>
+      <p class="sous" id="sousTitre">Assistant séances</p>
+    </div>
+    <button type="button" class="btn-leger" id="btnPersonne">Changer de personne</button>
+  </div>
+</header>
+
+<main class="fil" id="fil">
+  <div class="fil-in" id="messages" role="log" aria-live="polite" aria-label="Conversation avec l'assistant du club"></div>
+</main>
+
+<footer class="bas">
+  <div class="bas-in">
+    <div class="choix" id="choix" role="group" aria-label="Réponses proposées" hidden></div>
+    <form class="saisie" id="formulaire" autocomplete="off">
+      <label class="sr" for="champ">Ton message</label>
+      <input id="champ" type="text" placeholder="Écris ta réponse…" maxlength="200" enterkeyhint="send">
+      <button class="envoyer" type="submit" aria-label="Envoyer">
+        <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M3 10h13M11 4.500 16.500 10 11 15.500" fill="none" stroke="currentColor" stroke-width="2.200" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </form>
+    <p class="note" id="note"></p>
+  </div>
+</footer>
+
+<noscript><p style="padding:16px">Cette page a besoin de JavaScript pour fonctionner.</p></noscript>
+
+<script>
+"use strict";
+
+/* =====================================================================
+   1. À PERSONNALISER : le club et son planning
+   ---------------------------------------------------------------------
+   Tout ce qui suit est un exemple. Remplace le nom du club et la liste
+   des séances par les vôtres : l'assistant s'adapte tout seul.
+
+   Pour chaque séance :
+     jour       0 = lundi … 6 = dimanche
+     debut      "HH:MM" (avec le zéro : "09:30")
+     duree      en minutes
+     niveaux    1 = débutant / reprise, 2 = régulier, 3 = confirmé
+     intensite  1 = douce, 2 = modérée, 3 = soutenue
+     atouts     de 0 à 3 pour chaque objectif :
+                forme, endurance, force, souplesse, depense, social
+     sollicite  zones très sollicitées : "genou", "dos", "epaule"
+     bonPour    zones que la séance aide à ménager (facultatif)
+     public     "adulte" et/ou "ado" ; ajouter "senior" si la séance
+                est particulièrement adaptée aux 60 ans et plus
+   ===================================================================== */
+
+const CLUB = {
+  nom: "AS Les Tilleuls",
+  note: "Planning d'exemple, à remplacer par celui du club dans le fichier."
+};
+
+const SEANCES = [
+  { id: "renfo-midi", nom: "Renfo global", type: "renfo", jour: 0, debut: "12:15", duree: 45,
+    lieu: "Gymnase, salle 2", coach: "Nadia", niveaux: [1, 2, 3], intensite: 2, exterieur: false,
+    atouts: { forme: 3, force: 3, depense: 2, endurance: 1 }, sollicite: [], public: ["adulte"],
+    desc: "Tout le corps au poids du corps et avec petit matériel, chacun à son rythme." },
+  { id: "footing", nom: "Footing en groupe", type: "course", jour: 0, debut: "18:30", duree: 60,
+    lieu: "Départ du stade", coach: "Julien", niveaux: [1, 2], intensite: 2, exterieur: true,
+    atouts: { endurance: 3, forme: 2, depense: 2, social: 2 }, sollicite: ["genou"], public: ["adulte", "ado"],
+    desc: "Allure conversation, plusieurs groupes pour que personne ne coure seul." },
+  { id: "yoga-dyn", nom: "Yoga dynamique", type: "yoga", jour: 0, debut: "19:45", duree: 60,
+    lieu: "Dojo", coach: "Claire", niveaux: [2, 3], intensite: 2, exterieur: false,
+    atouts: { souplesse: 3, force: 2, forme: 2 }, sollicite: ["epaule"], public: ["adulte"],
+    desc: "Enchaînements fluides qui demandent du gainage et de l'équilibre." },
+  { id: "yoga-doux", nom: "Yoga doux", type: "yoga", jour: 1, debut: "09:30", duree: 60,
+    lieu: "Dojo", coach: "Claire", niveaux: [1, 2, 3], intensite: 1, exterieur: false,
+    atouts: { souplesse: 3, forme: 2 }, sollicite: [], bonPour: ["dos"], public: ["adulte", "senior"],
+    desc: "Postures tenues, respiration et relâchement. Aucune expérience nécessaire." },
+  { id: "circuit", nom: "Circuit training", type: "cardio", jour: 1, debut: "19:00", duree: 60,
+    lieu: "Gymnase, salle 1", coach: "Karim", niveaux: [2, 3], intensite: 3, exterieur: false,
+    atouts: { depense: 3, force: 2, endurance: 2, forme: 2 }, sollicite: ["genou", "epaule"], public: ["adulte"],
+    desc: "Ateliers enchaînés en musique, cardio et renforcement mêlés." },
+  { id: "marche", nom: "Marche nordique", type: "marche", jour: 2, debut: "09:30", duree: 75,
+    lieu: "Parking du bois", coach: "Hélène", niveaux: [1, 2], intensite: 1, exterieur: true,
+    atouts: { forme: 3, endurance: 2, social: 2 }, sollicite: [], bonPour: ["genou", "dos"], public: ["adulte", "senior"],
+    desc: "Marche active avec bâtons (prêtés par le club), sur chemins." },
+  { id: "multisports", nom: "Multisports jeunes", type: "collectif", jour: 2, debut: "14:00", duree: 90,
+    lieu: "Gymnase, salle 1", coach: "Karim", niveaux: [1, 2, 3], intensite: 2, exterieur: false,
+    atouts: { social: 3, depense: 3, forme: 2, endurance: 1 }, sollicite: [], public: ["ado"],
+    desc: "Un sport différent toutes les trois semaines : hand, basket, ultimate…" },
+  { id: "muscu", nom: "Musculation encadrée", type: "renfo", jour: 2, debut: "18:30", duree: 60,
+    lieu: "Salle de musculation", coach: "Thomas", niveaux: [1, 2, 3], intensite: 2, exterieur: false,
+    atouts: { force: 3, forme: 2, depense: 1 }, sollicite: ["epaule", "dos"], public: ["adulte"],
+    desc: "Programme individuel suivi par le coach, charges adaptées à chacun." },
+  { id: "badminton", nom: "Badminton loisir", type: "raquette", jour: 2, debut: "20:00", duree: 90,
+    lieu: "Gymnase, salle 1", coach: "en autonomie", niveaux: [1, 2, 3], intensite: 2, exterieur: false,
+    atouts: { social: 3, depense: 2, forme: 2, endurance: 1 }, sollicite: ["epaule", "genou"], public: ["adulte", "ado"],
+    desc: "Jeu libre en double, on tourne sur les terrains. Raquettes disponibles." },
+  { id: "gainage", nom: "Gainage et dos", type: "pilates", jour: 3, debut: "12:15", duree: 45,
+    lieu: "Dojo", coach: "Nadia", niveaux: [1, 2, 3], intensite: 1, exterieur: false,
+    atouts: { force: 2, souplesse: 2, forme: 2 }, sollicite: [], bonPour: ["dos"], public: ["adulte", "senior"],
+    desc: "Travail profond inspiré du Pilates pour une sangle abdominale solide." },
+  { id: "fractionne", nom: "Fractionné sur piste", type: "course", jour: 3, debut: "19:00", duree: 75,
+    lieu: "Piste du stade", coach: "Julien", niveaux: [2, 3], intensite: 3, exterieur: true,
+    atouts: { endurance: 3, depense: 3, forme: 1 }, sollicite: ["genou"], public: ["adulte", "ado"],
+    desc: "Séries courtes et rapides avec récupération. Allures données par niveau." },
+  { id: "gym-douce", nom: "Gym douce et équilibre", type: "gym", jour: 4, debut: "10:00", duree: 60,
+    lieu: "Gymnase, salle 2", coach: "Hélène", niveaux: [1], intensite: 1, exterieur: false,
+    atouts: { forme: 3, souplesse: 2, social: 2, force: 1 }, sollicite: [], bonPour: ["genou", "dos", "epaule"], public: ["adulte", "senior"],
+    desc: "Mobilité, équilibre et tonus en douceur, assis ou debout." },
+  { id: "mobilite", nom: "Mobilité et étirements", type: "mobilite", jour: 4, debut: "18:30", duree: 45,
+    lieu: "Dojo", coach: "Claire", niveaux: [1, 2, 3], intensite: 1, exterieur: false,
+    atouts: { souplesse: 3, forme: 1 }, sollicite: [], bonPour: ["dos", "epaule"], public: ["adulte", "ado", "senior"],
+    desc: "Pour délier les articulations et récupérer de la semaine." },
+  { id: "futsal", nom: "Futsal loisir", type: "collectif", jour: 4, debut: "20:00", duree: 90,
+    lieu: "Gymnase, salle 1", coach: "en autonomie", niveaux: [1, 2, 3], intensite: 3, exterieur: false,
+    atouts: { social: 3, depense: 3, endurance: 2 }, sollicite: ["genou"], public: ["adulte", "ado"],
+    desc: "Matchs mixtes sans classement, équipes tirées au sort chaque semaine." },
+  { id: "debut-course", nom: "Courir pour débuter", type: "course", jour: 5, debut: "09:00", duree: 45,
+    lieu: "Départ du stade", coach: "Julien", niveaux: [1], intensite: 1, exterieur: true,
+    atouts: { forme: 3, endurance: 2, social: 1 }, sollicite: ["genou"], public: ["adulte", "ado"],
+    desc: "Alternance marche et course, progression sur dix semaines." },
+  { id: "plein-air", nom: "Renfo en plein air", type: "renfo", jour: 5, debut: "10:30", duree: 60,
+    lieu: "Parc municipal", coach: "Thomas", niveaux: [1, 2, 3], intensite: 2, exterieur: true,
+    atouts: { depense: 3, force: 2, forme: 2, social: 2 }, sollicite: ["epaule"], public: ["adulte", "ado"],
+    desc: "Ateliers en binôme avec le mobilier du parc et des élastiques." },
+  { id: "sortie-longue", nom: "Sortie longue", type: "course", jour: 6, debut: "09:30", duree: 90,
+    lieu: "Parking du bois", coach: "en groupe", niveaux: [2, 3], intensite: 2, exterieur: true,
+    atouts: { endurance: 3, social: 2, forme: 1, depense: 2 }, sollicite: ["genou"], public: ["adulte"],
+    desc: "12 à 18 km sur chemins, à allure tranquille, en deux groupes." },
+  { id: "velo", nom: "Sortie vélo", type: "velo", jour: 6, debut: "09:00", duree: 120,
+    lieu: "Devant le gymnase", coach: "en groupe", niveaux: [2, 3], intensite: 2, exterieur: true,
+    atouts: { endurance: 3, social: 2, depense: 2, forme: 2 }, sollicite: ["dos"], bonPour: ["genou"], public: ["adulte"],
+    desc: "40 à 50 km sur petites routes, on attend en haut des côtes." }
+];
+
+/* =====================================================================
+   2. Vocabulaire de l'assistant
+   ===================================================================== */
+
+const JOURS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
+const JOURS_COURT = ["LUN", "MAR", "MER", "JEU", "VEN", "SAM", "DIM"];
+const INTENSITES = ["", "Intensité douce", "Intensité modérée", "Intensité soutenue"];
+const ZONES = { genou: "tes genoux", dos: "ton dos", epaule: "tes épaules" };
+
+const OBJECTIFS = {
+  forme:     { court: "te remettre en forme",   raison: "parfait pour retrouver la forme sans te brusquer" },
+  endurance: { court: "gagner en endurance",    raison: "fait travailler le souffle et l'endurance" },
+  force:     { court: "te renforcer",           raison: "renforce les muscles en profondeur" },
+  souplesse: { court: "gagner en souplesse",    raison: "assouplit et détend" },
+  depense:   { court: "te dépenser",            raison: "de quoi vraiment te dépenser" },
+  social:    { court: "rencontrer du monde",    raison: "ambiance de groupe, idéal pour faire connaissance" }
+};
+
+const ORDRE = ["prenom", "age", "objectif", "niveau", "dispo", "nb", "gene", "cadre"];
+
+const ETAPES = {
+  prenom: {
+    question: () => "Pour commencer, comment tu t'appelles ?",
+    indice: "Ton prénom",
+    lire(t) {
+      let s = t.replace(/^\s*(bonjour|salut|coucou|hello)[\s,!.]*/i, "")
+               .replace(/^\s*(je m['’ ]?appelle|moi c['’ ]?est|c['’ ]?est|je suis|mon pr[ée]nom est)\s+/i, "")
+               .replace(/[^\p{L}\s'’-]/gu, " ").trim();
+      const mots = s.split(/\s+/).filter(Boolean).slice(0, 2);
+      if (!mots.length) return null;
+      s = mots.map(m => m.charAt(0).toUpperCase() + m.slice(1)).join(" ").slice(0, 24);
+      return { v: s, l: s };
+    }
+  },
+  age: {
+    question: p => `Enchanté, ${esc(p.prenom)} ! Tu es dans quelle tranche d'âge ?`,
+    options: [
+      { v: "ado",    l: "Moins de 18 ans", re: /moins de 18|mineur|ado|lycee|college|enfant/ },
+      { v: "adulte", l: "18 à 59 ans",     re: /18 a 59|adulte|entre/ },
+      { v: "senior", l: "60 ans et plus",  re: /60 ans et plus|senior|retraite|plus de 60/ }
+    ],
+    lire(t) {
+      const n = t.match(/\d{1,3}/);
+      if (n) {
+        const a = +n[0];
+        if (a >= 6 && a <= 110) return optionDe("age", a < 18 ? "ado" : a < 60 ? "adulte" : "senior");
+      }
+      return lireUne("age", t);
+    }
+  },
+  objectif: {
+    question: () => "Qu'est-ce que tu viens chercher au club en priorité ?",
+    options: [
+      { v: "forme",     l: "Me remettre en forme",   re: /forme|sante|reprendre|reprise|bouger|poids|maigrir|mincir|entretien/ },
+      { v: "endurance", l: "Gagner en endurance",    re: /endurance|souffle|cardio|courir|course|10 ?km|marathon|trail/ },
+      { v: "force",     l: "Me renforcer",           re: /renfor|muscl|force|tonif|gainage|abdo/ },
+      { v: "souplesse", l: "Souplesse et détente",   re: /soupl|detend|detente|stress|relax|etir|yoga|zen|mobilite/ },
+      { v: "depense",   l: "Me dépenser à fond",     re: /depens|defoul|a fond|transpir|intens|bruler/ },
+      { v: "social",    l: "Rencontrer du monde",    re: /rencontr|monde|gens|ami|social|convivial|equipe|collectif|ambiance/ }
+    ],
+    lire: t => lireUne("objectif", t)
+  },
+  niveau: {
+    question: () => "Et côté sport, tu en es où en ce moment ?",
+    options: [
+      { v: 1, l: "Débutant ou en reprise",   re: /debut|repri|jamais|longtemps|zero|pas sportif|aucun|rarement|novice/ },
+      { v: 2, l: "Je bouge régulièrement",   re: /regul|moyen|intermed|de temps en temps|une fois|1 fois|parfois|correct/ },
+      { v: 3, l: "Sportif confirmé",         re: /confirm|avance|expert|competit|tres sportif|bon niveau|plusieurs fois|tous les jours/ }
+    ],
+    lire: t => lireUne("niveau", t)
+  },
+  dispo: {
+    multiple: true,
+    question: () => "Quand peux-tu venir ? Choisis tous les créneaux possibles, puis valide.",
+    options: [
+      { v: "matin", l: "En semaine, le matin", re: /matin/ },
+      { v: "midi",  l: "En semaine, le midi",  re: /midi|dejeuner|pause/ },
+      { v: "soir",  l: "En semaine, le soir",  re: /soir|apres le travail|apres le boulot|apres les cours|18h|19h|20h/ },
+      { v: "we",    l: "Le week-end",          re: /week|samedi|dimanche|\bwe\b/ }
+    ],
+    lire(t) {
+      const n = norm(t);
+      if (/peu importe|n importe|tout le temps|tous les creneaux|toujours|quand vous voulez|flexible/.test(n)) {
+        return { v: this.options.map(o => o.v), l: "Tous les créneaux" };
+      }
+      return lirePlusieurs("dispo", t);
+    }
+  },
+  nb: {
+    question: () => "Combien de séances par semaine veux-tu caser ?",
+    options: [
+      { v: 1, l: "1 séance" }, { v: 2, l: "2 séances" }, { v: 3, l: "3 séances" }, { v: 4, l: "4 séances" }
+    ],
+    lire(t) {
+      const n = norm(t);
+      const mots = { une: 1, un: 1, deux: 2, trois: 3, quatre: 4, cinq: 4, six: 4 };
+      const c = n.match(/\d+/);
+      let v = c ? +c[0] : null;
+      if (v === null) for (const m in mots) if (new RegExp("\\b" + m + "\\b").test(n)) { v = mots[m]; break; }
+      if (!v || v < 1) return null;
+      return optionDe("nb", Math.min(v, 4));
+    }
+  },
+  gene: {
+    multiple: true,
+    exclusif: "aucune",
+    question: () => "Y a-t-il une zone du corps à ménager ?",
+    options: [
+      { v: "aucune", l: "Aucune, tout va bien", re: /aucun|rien|non\b|tout va bien|\bras\b|pas de (douleur|probleme|souci|gene)/ },
+      { v: "genou",  l: "Genoux",  re: /genou|cheville|ligament|menisque/ },
+      { v: "dos",    l: "Dos",     re: /\bdos\b|lombaire|lumbago|sciatique|hernie|cervical/ },
+      { v: "epaule", l: "Épaules", re: /epaule|coude|poignet|tendinite/ }
+    ],
+    lire(t) {
+      const r = lirePlusieurs("gene", t);
+      if (!r) return null;
+      const zones = r.v.filter(v => v !== "aucune");
+      return zones.length ? { v: zones, l: zones.map(z => optionDe("gene", z).l).join(", ") }
+                          : { v: [], l: "Aucune, tout va bien" };
+    }
+  },
+  cadre: {
+    question: () => "Dernière question : plutôt dedans ou dehors ?",
+    options: [
+      { v: "interieur", l: "En salle",     re: /salle|interieur|dedans|chaud|abri/ },
+      { v: "exterieur", l: "En plein air", re: /air|exterieur|dehors|nature|parc/ },
+      { v: "indiff",    l: "Peu importe",  re: /peu importe|egal|les deux|indiff|n importe|comme vous|pas de pref/ }
+    ],
+    lire: t => lireUne("cadre", t)
+  }
+};
+
+/* =====================================================================
+   3. Moteur de recommandation
+   ===================================================================== */
+
+function creneau(s) {
+  if (s.jour >= 5) return "we";
+  const h = parseInt(s.debut, 10);
+  return h < 12 ? "matin" : h < 15 ? "midi" : "soir";
+}
+
+/* Renvoie null si la séance ne convient pas, sinon un score et les raisons. */
+function evaluer(s, p) {
+  if (!s.public.includes(p.age === "ado" ? "ado" : "adulte")) return null;
+  if (!s.niveaux.includes(p.niveau)) return null;
+  if (!p.dispo.includes(creneau(s))) return null;
+  if (p.exclus.includes(s.id)) return null;
+
+  const touchees = p.gene.filter(z => s.sollicite.includes(z));
+  if (touchees.length && s.intensite >= 2) return null;
+
+  const atout = s.atouts[p.objectif] || 0;
+  let score = 3 * atout + 0.5 * (s.atouts.forme || 0);
+  const raisons = [];
+
+  if (atout >= 2) raisons.push([atout + 2, OBJECTIFS[p.objectif].raison]);
+
+  if (p.niveau === 1) {
+    if (s.intensite === 1) { score += 1.5; raisons.push([2.5, "rythme tranquille, idéal quand on démarre"]); }
+    if (s.intensite === 3) score -= 3;
+  } else if (p.niveau === 3) {
+    if (s.intensite === 3) { score += 1; raisons.push([2, "assez exigeante pour ton niveau"]); }
+    if (s.intensite === 1 && p.objectif !== "souplesse") score -= 0.5;
+  }
+
+  if (touchees.length) score -= 2;
+  const menagees = p.gene.filter(z => (s.bonPour || []).includes(z));
+  if (menagees.length) {
+    score += 1.5;
+    raisons.push([4.5, "ménage " + menagees.map(z => ZONES[z]).join(" et ")]);
+  } else if (p.gene.length && !touchees.length) {
+    raisons.push([1.5, "ne force pas sur " + p.gene.map(z => ZONES[z]).join(" ni sur ")]);
+  }
+
+  if (p.cadre === "exterieur") {
+    if (s.exterieur) { score += 1.5; raisons.push([2, "en plein air, comme tu préfères"]); } else score -= 1;
+  } else if (p.cadre === "interieur") {
+    if (!s.exterieur) score += 1.5; else score -= 1;
+  }
+
+  if (p.age === "senior" && s.public.includes("senior")) {
+    score += 1.5;
+    raisons.push([2.2, "groupe où les 60 ans et plus sont nombreux"]);
+  }
+
+  if (!raisons.length) raisons.push([0, "complète bien le reste de ta semaine"]);
+  raisons.sort((a, b) => b[0] - a[0]);
+  return { s, score, raisons: raisons.slice(0, 2).map(r => r[1]) };
+}
+
+/* Choisit jusqu'à p.nb séances : une par jour, variées, sans deux grosses
+   séances deux jours de suite. */
+function choisir(p) {
+  const candidats = SEANCES.map(s => evaluer(s, p)).filter(Boolean);
+  const pris = [];
+  while (pris.length < p.nb) {
+    let meilleur = null, max = -Infinity;
+    for (const c of candidats) {
+      if (pris.includes(c) || pris.some(x => x.s.jour === c.s.jour)) continue;
+      let sc = c.score - 2.5 * pris.filter(x => x.s.type === c.s.type).length;
+      if (c.s.intensite === 3 && pris.some(x => x.s.intensite === 3 && Math.abs(x.s.jour - c.s.jour) === 1)) sc -= 2;
+      if (sc > max) { max = sc; meilleur = c; }
+    }
+    if (!meilleur) break;
+    pris.push(meilleur);
+  }
+  return pris.sort((a, b) => a.s.jour - b.s.jour || a.s.debut.localeCompare(b.s.debut));
+}
+
+/* =====================================================================
+   4. Outils
+   ===================================================================== */
+
+function norm(t) {
+  return String(t).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(/[’'`-]/g, " ").replace(/\s+/g, " ").trim();
+}
+function esc(t) {
+  return String(t).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+function heure(hhmm) { return hhmm.replace(/^0/, "").replace(":", "h"); }
+function fin(s) {
+  const [h, m] = s.debut.split(":").map(Number);
+  const t = h * 60 + m + s.duree;
+  return Math.floor(t / 60) + "h" + String(t % 60).padStart(2, "0");
+}
+function pluriel(n, mot) { return n + " " + mot + (n > 1 ? "s" : ""); }
+function optionDe(etape, v) {
+  const o = ETAPES[etape].options.find(o => o.v === v);
+  return o ? { v: o.v, l: o.l } : null;
+}
+function lireUne(etape, t) {
+  const n = norm(t);
+  const opts = ETAPES[etape].options;
+  const exact = opts.find(o => norm(o.l) === n);
+  if (exact) return { v: exact.v, l: exact.l };
+  const trouves = opts.filter(o => o.re && o.re.test(n));
+  return trouves.length === 1 ? { v: trouves[0].v, l: trouves[0].l } : null;
+}
+function lirePlusieurs(etape, t) {
+  const n = norm(t);
+  const trouves = ETAPES[etape].options.filter(o => norm(o.l) === n || (o.re && o.re.test(n)));
+  if (!trouves.length) return null;
+  return { v: trouves.map(o => o.v), l: trouves.map(o => o.l).join(", ") };
+}
+
+/* ----- mémoire locale : les profils restent dans ce navigateur ----- */
+const CLE = "club-assistant-profils-v1";
+function lireProfils() {
+  try { return JSON.parse(localStorage.getItem(CLE)) || {}; } catch (e) { return {}; }
+}
+function ecrireProfils(profils) {
+  try { localStorage.setItem(CLE, JSON.stringify(profils)); } catch (e) { /* navigation privée : tant pis */ }
+}
+function enregistrer(p) {
+  const profils = lireProfils();
+  profils[norm(p.prenom)] = p;
+  ecrireProfils(profils);
+}
+function profilValide(p) {
+  return p && typeof p.prenom === "string" && ORDRE.every(k => p[k] !== undefined) &&
+    Array.isArray(p.dispo) && Array.isArray(p.gene) && Array.isArray(p.exclus);
+}
+
+/* =====================================================================
+   5. Interface de discussion
+   ===================================================================== */
+
+const $messages = document.getElementById("messages");
+const $fil = document.getElementById("fil");
+const $choix = document.getElementById("choix");
+const $champ = document.getElementById("champ");
+const $form = document.getElementById("formulaire");
+const $sous = document.getElementById("sousTitre");
+const sansAnimation = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+let file = Promise.resolve();   // les messages de l'assistant s'affichent l'un après l'autre
+let P = null;                   // profil de la personne en cours
+let mode = "etape";             // "qui" | "etape" | "libre" | "remplacer"
+let etape = null;
+let edition = false;            // vrai quand on modifie une seule réponse
+let dernieres = [];             // dernières séances proposées
+
+function descendre() { $fil.scrollTop = $fil.scrollHeight; }
+function attendre(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function bulle(classe, html) {
+  const d = document.createElement("div");
+  d.className = "msg " + classe;
+  d.innerHTML = html;
+  $messages.appendChild(d);
+  descendre();
+  return d;
+}
+function moi(texte) { bulle("moi", "<p>" + esc(texte) + "</p>"); }
+
+/* html : contenu de confiance (les saisies y sont passées par esc()). */
+function bot(html, large) {
+  file = file.then(async () => {
+    const t = bulle("bot", '<span class="ecrit" aria-hidden="true"><i></i><i></i><i></i></span>');
+    await attendre(sansAnimation ? 120 : 480);
+    t.remove();
+    bulle("bot" + (large ? " large" : ""), html.startsWith("<") ? html : "<p>" + html + "</p>");
+  });
+  return file;
+}
+
+function viderChoix() { $choix.innerHTML = ""; $choix.hidden = true; }
+
+function montrerChoix(liste) {
+  file.then(() => {
+    viderChoix();
+    for (const c of liste) {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "puce"; b.textContent = c.l;
+      b.addEventListener("click", () => { viderChoix(); moi(c.l); c.fn(); });
+      $choix.appendChild(b);
+    }
+    $choix.hidden = !liste.length;
+    descendre();
+  });
+}
+
+function montrerChoixMultiples(id) {
+  const def = ETAPES[id];
+  file.then(() => {
+    viderChoix();
+    const valider = document.createElement("button");
+    valider.type = "button"; valider.className = "puce valider"; valider.textContent = "Valider"; valider.disabled = true;
+    const boutons = def.options.map(o => {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "puce"; b.textContent = o.l; b.dataset.v = o.v;
+      b.setAttribute("aria-pressed", "false");
+      b.addEventListener("click", () => {
+        const actif = b.getAttribute("aria-pressed") !== "true";
+        b.setAttribute("aria-pressed", String(actif));
+        if (actif && def.exclusif) {
+          for (const x of boutons) {
+            if (x !== b && (o.v === def.exclusif || x.dataset.v === def.exclusif)) x.setAttribute("aria-pressed", "false");
+          }
+        }
+        valider.disabled = !boutons.some(x => x.getAttribute("aria-pressed") === "true");
+      });
+      $choix.appendChild(b);
+      return b;
+    });
+    valider.addEventListener("click", () => {
+      const pris = def.options.filter((o, i) => boutons[i].getAttribute("aria-pressed") === "true");
+      const libelle = pris.map(o => o.l).join(", ");
+      let v = pris.map(o => o.v);
+      if (def.exclusif) v = v.filter(x => x !== def.exclusif);
+      viderChoix(); moi(libelle); repondre(id, v);
+    });
+    $choix.appendChild(valider);
+    $choix.hidden = false;
+    descendre();
+  });
+}
+
+function majEntete() {
+  $sous.innerHTML = P && P.prenom ? "Séances pour <b>" + esc(P.prenom) + "</b>" : "Assistant séances";
+}
+
+/* =====================================================================
+   6. Déroulé de la conversation
+   ===================================================================== */
+
+function poser(id, modif) {
+  mode = "etape"; etape = id; edition = !!modif;
+  const def = ETAPES[id];
+  bot(def.question(P));
+  $champ.placeholder = def.indice || "Ou écris ta réponse…";
+  if (def.multiple) montrerChoixMultiples(id);
+  else if (def.options) montrerChoix(def.options.map(o => ({ l: o.l, fn: () => repondre(id, o.v) })));
+  else viderChoix();
+}
+
+function repondre(id, valeur) {
+  P[id] = valeur;
+  if (id === "prenom") majEntete();
+  if (id === "gene" && valeur.length) {
+    bot("C'est noté, j'écarte les séances qui tirent trop dessus. Si la douleur dure, parles-en à un médecin ou à un kiné avant de reprendre, et préviens le coach en arrivant.");
+  }
+  if (id === "nb" && valeur === 4 && P.niveau === 1) {
+    bot("Quatre séances pour démarrer, c'est ambitieux : garde au moins un jour de repos entre deux, et n'hésite pas à en sauter une les premières semaines.");
+  }
+  const suivante = ORDRE[ORDRE.indexOf(id) + 1];
+  if (edition || !suivante) {
+    if (id !== "prenom") P.exclus = [];
+    recommander();
+  } else {
+    poser(suivante);
+  }
+}
+
+function ficheSeance(c) {
+  const s = c.s;
+  const barres = [1, 2, 3].map(i => '<i' + (i <= s.intensite ? ' class="on"' : "") + "></i>").join("");
+  const avec = /^en /.test(s.coach) ? s.coach : "avec " + s.coach;
+  return '<li class="seance">' +
+    '<div class="dossard"><span class="jour">' + JOURS_COURT[s.jour] + '</span><span class="heure">' + heure(s.debut) + "</span></div>" +
+    "<div><h3>" + esc(s.nom) + "</h3>" +
+    '<p class="meta">' + JOURS[s.jour] + " de " + heure(s.debut) + " à " + fin(s) + " · " + esc(s.lieu) + " · " + esc(avec) + "</p>" +
+    '<span class="intensite"><span class="barres" aria-hidden="true">' + barres + "</span>" + INTENSITES[s.intensite] + "</span>" +
+    '<p class="desc">' + esc(s.desc) + "</p>" +
+    '<p class="pourquoi"><strong>Pour toi :</strong> ' + esc(c.raisons.join(" ; ")) + ".</p>" +
+    "</div></li>";
+}
+
+function recommander(retour) {
+  mode = "libre"; etape = null; edition = false;
+  $champ.placeholder = "Pose une question ou demande un changement…";
+  enregistrer(P);
+  dernieres = choisir(P);
+  const n = dernieres.length;
+  const nom = esc(P.prenom);
+
+  if (!n) {
+    bot("Je n'ai trouvé aucune séance du club qui colle à la fois à tes créneaux et à tes critères, " + nom + ". Le plus efficace est d'ouvrir un créneau de plus.");
+    montrerChoix([
+      { l: "Changer mes créneaux", fn: () => poser("dispo", true) },
+      { l: "Voir tout le planning", fn: planningComplet },
+      { l: "Tout reprendre", fn: () => nouvellePersonne(P.prenom) }
+    ]);
+    return;
+  }
+
+  let intro = retour
+    ? "Content de te revoir, " + nom + " ! Voici ta semaine pour " + OBJECTIFS[P.objectif].court + " :"
+    : "Voilà ce que je te propose, " + nom + ", pour " + OBJECTIFS[P.objectif].court + " :";
+  let html = "<p>" + intro + '</p><ul class="semaine">' + dernieres.map(ficheSeance).join("") + "</ul>";
+
+  if (n < P.nb) {
+    html += '<p class="petit">Tu voulais ' + pluriel(P.nb, "séance") + ", mais je n'en trouve que " + n +
+      " qui " + (n > 1 ? "conviennent" : "convient") + " sur tes créneaux, sans doublon le même jour. Ouvre un créneau de plus et j'en ajoute.</p>";
+  } else if (P.niveau === 1) {
+    html += '<p class="petit">Pour une reprise, commence par la première et vois comment tu récupères avant d\'ajouter les autres.</p>';
+  } else if (dernieres.filter(c => c.s.intensite === 3).length >= 2) {
+    html += '<p class="petit">Deux séances soutenues dans la semaine : dors bien entre les deux.</p>';
+  }
+  bot(html, true);
+  montrerActions();
+}
+
+function montrerActions() {
+  const actions = [];
+  if (dernieres.length) actions.push({ l: "Remplacer une séance", fn: demanderRemplacement });
+  actions.push(
+    { l: "Changer mes créneaux", fn: () => poser("dispo", true) },
+    { l: "Changer d'objectif", fn: () => poser("objectif", true) },
+    { l: "Voir tout le planning", fn: planningComplet }
+  );
+  montrerChoix(actions);
+}
+
+function demanderRemplacement() {
+  if (!dernieres.length) { bot("Il n'y a pas encore de séance à remplacer."); montrerActions(); return; }
+  mode = "remplacer";
+  bot("Laquelle ne te convient pas ?");
+  montrerChoix(dernieres.map(c => ({
+    l: c.s.nom + " (" + JOURS[c.s.jour].toLowerCase() + ")",
+    fn: () => remplacer(c.s.id)
+  })).concat([{ l: "Finalement, aucune", fn: () => { mode = "libre"; bot("Très bien, on garde tout."); montrerActions(); } }]));
+}
+
+function remplacer(id) {
+  const s = SEANCES.find(x => x.id === id);
+  P.exclus.push(id);
+  const essai = choisir(P);
+  if (essai.length < dernieres.length) {
+    bot("J'ai retiré « " + esc(s.nom) + " », mais aucune autre séance ne rentre dans tes critères à la place.");
+  } else {
+    bot("C'est fait, j'ai retiré « " + esc(s.nom) + " ».");
+  }
+  recommander();
+}
+
+function planningComplet() {
+  let html = "<p>Voici toutes les séances de la semaine au club :</p><ul class=\"planning\">";
+  for (let j = 0; j < 7; j++) {
+    const du = SEANCES.filter(s => s.jour === j).sort((a, b) => a.debut.localeCompare(b.debut));
+    if (!du.length) continue;
+    html += '<li><span class="pj">' + JOURS[j] + "</span>" + du.map(s =>
+      '<div class="ligne"><span class="ph">' + heure(s.debut) + "</span><span>" + esc(s.nom) +
+      ' <span class="petit">· ' + s.duree + " min · " + INTENSITES[s.intensite].toLowerCase() + "</span></span></div>").join("") + "</li>";
+  }
+  bot(html + "</ul>", true);
+  if (P && profilValide(P)) { mode = "libre"; montrerActions(); }
+}
+
+function expliquer() {
+  bot("Je pars du planning du club et je garde uniquement les séances ouvertes à ton âge et à ton niveau, sur tes créneaux. " +
+      "J'écarte celles qui sollicitent une zone que tu veux ménager, puis je classe le reste selon ton objectif et ta préférence salle ou plein air. " +
+      "Enfin je varie : une seule séance par jour, pas deux fois la même activité si je peux l'éviter, et pas deux grosses séances deux jours de suite.");
+  montrerActions();
+}
+
+function aide() {
+  bot("Tu peux me demander de <strong>remplacer une séance</strong>, de changer tes <strong>créneaux</strong>, ton <strong>objectif</strong>, ton <strong>niveau</strong> ou le <strong>nombre de séances</strong>, " +
+      "me signaler une <strong>douleur</strong>, voir <strong>tout le planning</strong>, ou passer la main à <strong>quelqu'un d'autre</strong>.");
+  montrerActions();
+}
+
+/* ----- changement de personne ----- */
+
+function nouvellePersonne(prenomConnu) {
+  P = { exclus: [] };
+  dernieres = [];
+  majEntete();
+  if (prenomConnu) { P.prenom = prenomConnu; majEntete(); poser("age"); }
+  else poser("prenom");
+}
+
+function chargerProfil(p) {
+  P = p; majEntete(); recommander(true);
+}
+
+function quiEstLa(premiereFois) {
+  const profils = Object.values(lireProfils()).filter(profilValide);
+  P = null; dernieres = []; majEntete();
+  if (!profils.length) {
+    if (premiereFois) {
+      bot("Salut ! Je suis l'assistant de " + esc(CLUB.nom) + ". En huit questions rapides, je te compose une semaine de séances qui te ressemble.");
+    } else {
+      bot("On repart de zéro.");
+    }
+    nouvellePersonne();
+    return;
+  }
+  mode = "qui";
+  $champ.placeholder = "Ton prénom…";
+  bot(premiereFois ? "Salut ! Bienvenue à " + esc(CLUB.nom) + ". Qui est là ?" : "D'accord. Qui est là ?");
+  montrerChoix(profils.slice(0, 8).map(p => ({ l: p.prenom, fn: () => chargerProfil(p) }))
+    .concat([{ l: "Quelqu'un d'autre", fn: () => nouvellePersonne() }]));
+}
+
+function oublierProfil() {
+  const profils = lireProfils();
+  const nom = P.prenom;
+  delete profils[norm(nom)];
+  ecrireProfils(profils);
+  bot("J'ai effacé le profil de " + esc(nom) + " de ce navigateur.");
+  quiEstLa(false);
+}
+
+/* ----- compréhension des messages écrits ----- */
+
+function demandeGlobale(n) {
+  if (/recommenc|repartir de zero|changer de personne|quelqu un d autre|nouvelle personne|nouveau profil|c est plus moi/.test(n)) {
+    quiEstLa(false); return true;
+  }
+  return false;
+}
+
+function messageLibre(t) {
+  const n = norm(t);
+  if (demandeGlobale(n)) return;
+
+  if (/oubli|supprim|efface/.test(n) && /profil|moi|donnees|tout/.test(n)) return oublierProfil();
+  if (/remplac|autre seance|autre chose|pas cette|change la seance|enleve|retire|ne me (plait|convient)/.test(n)) {
+    const visee = dernieres.find(c => n.includes(norm(c.s.nom)) || n.includes(norm(JOURS[c.s.jour])));
+    return visee ? remplacer(visee.s.id) : demanderRemplacement();
+  }
+  if (/planning|toutes les seances|programme complet|tout voir|quelles seances|liste/.test(n)) return planningComplet();
+  if (/pourquoi|comment tu (choisis|fais)|sur quoi/.test(n)) return expliquer();
+
+  if (/genou|\bdos\b|epaule|mal |douleur|bless|gene\b|tendinite|lumbago/.test(n)) {
+    const r = ETAPES.gene.lire(t);
+    if (r && r.v.length && !/plus mal|gueri|va mieux|plus de douleur/.test(n)) {
+      edition = true;
+      P.gene = Array.from(new Set(P.gene.concat(r.v)));
+      return repondre("gene", P.gene);
+    }
+    return poser("gene", true);
+  }
+  if (/seance/.test(n) && (/\d|plus de|moins de|combien|nombre|une|deux|trois|quatre/.test(n))) {
+    const r = /\d|\b(une|deux|trois|quatre)\b/.test(n) ? ETAPES.nb.lire(t) : null;
+    if (r) { edition = true; return repondre("nb", r.v); }
+    return poser("nb", true);
+  }
+  if (/dispo|creneau|horaire|matin|midi|soir|week|samedi|dimanche|quand/.test(n)) {
+    const r = /dispo|creneau|horaire|quand/.test(n) ? null : ETAPES.dispo.lire(t);
+    if (r) { edition = true; return repondre("dispo", r.v); }
+    return poser("dispo", true);
+  }
+  if (/objectif|\bbut\b|envie de|je veux|je voudrais|j aimerais/.test(n)) {
+    const r = ETAPES.objectif.lire(t);
+    if (r) { edition = true; return repondre("objectif", r.v); }
+    return poser("objectif", true);
+  }
+  if (/niveau|trop dur|trop difficile|trop facile|trop intense/.test(n)) return poser("niveau", true);
+  if (/dehors|exterieur|plein air|interieur|en salle|dedans/.test(n)) {
+    const r = ETAPES.cadre.lire(t);
+    if (r) { edition = true; return repondre("cadre", r.v); }
+    return poser("cadre", true);
+  }
+  if (/age|ans\b/.test(n)) return poser("age", true);
+  if (/merci|super|genial|parfait|top\b|nickel/.test(n)) {
+    bot("Avec plaisir, " + esc(P.prenom) + ". Bonne séance, et pense à prendre de l'eau !");
+    return montrerActions();
+  }
+  if (/^(bonjour|salut|coucou|hello|bonsoir)\b/.test(n)) {
+    bot("Salut " + esc(P.prenom) + " ! Dis-moi ce que tu veux ajuster dans ta semaine.");
+    return montrerActions();
+  }
+  if (/aide|help|que peux tu|tu sais faire|\?$/.test(n)) return aide();
+
+  bot("Je ne suis pas sûr d'avoir compris. Je suis un assistant simple : je sais surtout ajuster ta semaine de séances.");
+  aide();
+}
+
+function recevoir(t) {
+  moi(t);
+  const n = norm(t);
+
+  if (mode === "qui") {
+    const profils = lireProfils();
+    if (profilValide(profils[n])) { viderChoix(); return chargerProfil(profils[n]); }
+    const r = ETAPES.prenom.lire(t);
+    viderChoix();
+    if (r && profilValide(profils[norm(r.v)])) return chargerProfil(profils[norm(r.v)]);
+    return nouvellePersonne(r ? r.v : null);
+  }
+
+  if (mode === "etape") {
+    if (etape !== "prenom" && demandeGlobale(n)) return;
+    const r = ETAPES[etape].lire(t);
+    if (!r) {
+      bot(etape === "prenom" ? "Je n'ai pas saisi ton prénom, tu peux me le réécrire ?"
+                             : "Je n'ai pas bien saisi. Choisis plutôt l'une des réponses juste au-dessus du champ de saisie.");
+      return;
+    }
+    viderChoix();
+    return repondre(etape, r.v);
+  }
+
+  if (mode === "remplacer") {
+    const visee = dernieres.find(c => n.includes(norm(c.s.nom)) || n.includes(norm(JOURS[c.s.jour])));
+    if (visee) { viderChoix(); return remplacer(visee.s.id); }
+    if (/aucun|non\b|annul|rien|finalement/.test(n)) { viderChoix(); mode = "libre"; bot("Très bien, on garde tout."); return montrerActions(); }
+    bot("Dis-moi le nom ou le jour de la séance à remplacer, ou choisis-la ci-dessous.");
+    return;
+  }
+
+  viderChoix();
+  messageLibre(t);
+}
+
+/* =====================================================================
+   7. Démarrage
+   ===================================================================== */
+
+document.getElementById("nomClub").textContent = CLUB.nom;
+document.getElementById("note").textContent = CLUB.note || "";
+document.title = "Assistant séances · " + CLUB.nom;
+
+$form.addEventListener("submit", e => {
+  e.preventDefault();
+  const t = $champ.value.trim();
+  if (!t) return;
+  $champ.value = "";
+  recevoir(t);
+});
+document.getElementById("btnPersonne").addEventListener("click", () => { viderChoix(); quiEstLa(false); });
+
+quiEstLa(true);
+</script>
+</body>
+</html>

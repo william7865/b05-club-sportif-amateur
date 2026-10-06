@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Conseiller de séances</title>
+<style>
+  :root {
+    --fond: #E9EDE6;
+    --papier: #FAFBF8;
+    --encre: #14231D;
+    --encre-2: #4B5A53;
+    --trait: #CBD4CA;
+    --vert: #0E5C44;
+    --vert-doux: #DBE9DF;
+    --bulle: #0E5C44;
+    --piste: #C4412A;
+    --ligne: rgba(255, 255, 255, .75);
+    --titre: "Avenir Next Condensed", "Roboto Condensed", "Arial Narrow", system-ui, sans-serif;
+    --texte: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --fond: #0E1613;
+      --papier: #16201C;
+      --encre: #E8EEE9;
+      --encre-2: #9FB0A7;
+      --trait: #2A3932;
+      --vert: #62C9A1;
+      --vert-doux: #1C3028;
+      --bulle: #14684D;
+      --piste: #D9573D;
+      --ligne: rgba(255, 255, 255, .55);
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--fond);
+    color: var(--encre);
+    font: 16px/1.5 var(--texte);
+    display: grid;
+    grid-template-rows: auto auto minmax(0, 1fr);
+    height: 100dvh;
+  }
+  button, input, select { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  :focus-visible { outline: 2px solid var(--vert); outline-offset: 2px; }
+  .vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+  /* En-tête */
+  .tete {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px 20px; flex-wrap: wrap;
+    padding: 14px 24px;
+    background: var(--papier);
+  }
+  .tete h1 {
+    margin: 0;
+    font: 700 28px/1 var(--titre);
+    letter-spacing: .03em; text-transform: uppercase;
+  }
+  .tete p { margin: 3px 0 0; font-size: 13px; color: var(--encre-2); }
+  .outils { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .outils select, .btn {
+    min-height: 40px; padding: 0 14px;
+    border: 1px solid var(--trait); border-radius: 8px;
+    background: var(--papier);
+  }
+  .outils select { max-width: 190px; }
+  .btn:hover, .outils select:hover { border-color: var(--vert); }
+  .btn.plein { background: var(--bulle); border-color: var(--bulle); color: #fff; font-weight: 600; }
+  .btn.plein:hover { filter: brightness(1.12); }
+  .btn.plein:disabled { opacity: .45; cursor: default; filter: none; }
+  .mobile { display: none; }
+
+  /* Bande "couloirs de piste" */
+  .couloirs {
+    height: 14px;
+    background: repeating-linear-gradient(0deg, var(--piste) 0 4px, var(--ligne) 4px 5px);
+  }
+
+  main {
+    display: grid; grid-template-columns: minmax(0, 1fr) 340px;
+    min-height: 0;
+  }
+
+  /* Conversation */
+  .chat { display: grid; grid-template-rows: minmax(0, 1fr) auto auto auto; min-height: 0; min-width: 0; }
+  #log {
+    position: relative; overflow-y: auto; overscroll-behavior: contain;
+    padding: 24px 24px 8px;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .msg { max-width: 620px; overflow-wrap: anywhere; }
+  .msg p { margin: 0 0 8px; }
+  .msg p:last-child { margin-bottom: 0; }
+  .msg.bot { padding-left: 16px; position: relative; }
+  .msg.bot::before {
+    content: ""; position: absolute; left: 0; top: .5em;
+    width: 6px; height: 6px; background: var(--piste);
+  }
+  .msg.user {
+    align-self: flex-end; max-width: min(78%, 480px);
+    background: var(--bulle); color: #fff;
+    padding: 9px 14px; border-radius: 14px 14px 3px 14px;
+  }
+  .pts { display: inline-flex; gap: 4px; padding: 6px 0; }
+  .pts i { width: 6px; height: 6px; border-radius: 50%; background: var(--encre-2); animation: pt 1s infinite ease-in-out; }
+  .pts i:nth-child(2) { animation-delay: .15s; }
+  .pts i:nth-child(3) { animation-delay: .3s; }
+  @keyframes pt { 0%, 60%, 100% { opacity: .25; } 30% { opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { .pts i { animation: none; } }
+
+  /* Cartes séance */
+  .seances { display: grid; gap: 8px; margin: 10px 0; }
+  .seance {
+    display: grid; grid-template-columns: 68px minmax(0, 1fr);
+    background: var(--papier); border: 1px solid var(--trait); border-radius: 10px; overflow: hidden;
+  }
+  .seance.hors { border-style: dashed; }
+  .quand {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    background: var(--vert-doux); padding: 10px 4px;
+  }
+  .quand b { font: 700 22px/1 var(--titre); letter-spacing: .05em; text-transform: uppercase; color: var(--vert); }
+  .quand span { font-size: 13px; font-variant-numeric: tabular-nums; color: var(--encre-2); }
+  .quoi { padding: 10px 14px; min-width: 0; }
+  .quoi h3 { margin: 0; font-size: 16px; line-height: 1.3; }
+  .quoi .meta { margin: 2px 0 0; font-size: 13px; color: var(--encre-2); }
+  .quoi .raisons { margin: 6px 0 0; }
+  .int { display: inline-flex; gap: 2px; vertical-align: 1px; margin-right: 3px; }
+  .int i { width: 4px; height: 10px; background: var(--trait); border-radius: 1px; }
+  .int i.on { background: var(--piste); }
+  .notes { margin: 8px 0 0; padding: 0; list-style: none; font-size: 13px; color: var(--encre-2); }
+  .notes li { padding-left: 14px; position: relative; margin-bottom: 4px; }
+  .notes li::before { content: "–"; position: absolute; left: 0; }
+
+  .planning { margin: 8px 0 0; padding: 0; list-style: none; font-size: 13px; }
+  .planning li { display: grid; grid-template-columns: 44px 48px minmax(0, 1fr); gap: 8px; padding: 5px 0; border-top: 1px solid var(--trait); }
+  .planning b { font: 700 13px/1.5 var(--titre); letter-spacing: .05em; text-transform: uppercase; color: var(--vert); }
+  .planning span { font-variant-numeric: tabular-nums; color: var(--encre-2); }
+
+  /* Réponses rapides */
+  #choix { display: flex; flex-wrap: wrap; gap: 8px; padding: 8px 24px 4px; }
+  #choix:empty { display: none; }
+  .puce {
+    min-height: 40px; padding: 0 14px;
+    border: 1px solid var(--vert); border-radius: 20px;
+    background: transparent; color: var(--vert); font-weight: 500;
+  }
+  .puce:hover { background: var(--vert-doux); }
+  .puce[aria-pressed="true"] { background: var(--bulle); border-color: var(--bulle); color: #fff; }
+
+  #saisie { display: flex; gap: 8px; padding: 10px 24px 6px; }
+  #saisie input {
+    flex: 1; min-width: 0; min-height: 46px; padding: 0 14px;
+    border: 1px solid var(--trait); border-radius: 10px; background: var(--papier);
+  }
+  #saisie input::placeholder { color: var(--encre-2); }
+  #saisie input:focus { border-color: var(--vert); outline: none; box-shadow: 0 0 0 2px var(--vert-doux); }
+  #saisie .btn { min-height: 46px; padding: 0 18px; border-radius: 10px; }
+  .mention { margin: 0; padding: 0 24px 12px; font-size: 13px; color: var(--encre-2); }
+
+  /* Fiche */
+  #fiche {
+    background: var(--papier); border-left: 1px solid var(--trait);
+    padding: 22px 22px 24px; overflow-y: auto;
+  }
+  #fiche h2 {
+    margin: 0 0 4px; font: 700 13px/1.2 var(--titre);
+    letter-spacing: .12em; text-transform: uppercase; color: var(--encre-2);
+  }
+  #fiche .nom { margin: 0 0 14px; font: 700 28px/1.1 var(--titre); letter-spacing: .02em; text-transform: uppercase; overflow-wrap: anywhere; }
+  .lignes { margin: 0 0 22px; }
+  .lignes div { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 8px; padding: 8px 0; border-top: 1px solid var(--trait); }
+  .lignes dt { grid-column: 1 / -1; font-size: 13px; color: var(--encre-2); }
+  .lignes dd { margin: 0; font-size: 16px; }
+  .lignes dd.vide { color: var(--encre-2); }
+  .lien { border: 0; background: none; padding: 0 2px; font-size: 13px; color: var(--vert); text-decoration: underline; text-underline-offset: 2px; }
+  .semaine { margin: 8px 0 20px; padding: 0; list-style: none; }
+  .semaine li { display: grid; grid-template-columns: 42px minmax(0, 1fr); gap: 8px; align-items: baseline; padding: 7px 0; border-top: 1px solid var(--trait); font-size: 13px; }
+  .semaine b { font: 700 16px/1.3 var(--titre); letter-spacing: .06em; text-transform: uppercase; color: var(--encre-2); }
+  .semaine li.actif b { color: var(--piste); }
+  .semaine li.actif span { font-weight: 600; }
+  .semaine small { display: block; font-weight: 400; font-size: 13px; color: var(--encre-2); }
+  .semaine li:not(.actif) span { color: var(--encre-2); }
+  .attente { font-size: 13px; color: var(--encre-2); margin: 8px 0 20px; }
+
+  @media (max-width: 900px) {
+    main { grid-template-columns: minmax(0, 1fr); }
+    .mobile { display: inline-block; }
+    #fiche { display: none; border-left: 0; }
+    body.fiche-ouverte #fiche { display: block; position: fixed; inset: 0; z-index: 10; }
+    .tete { padding: 12px 16px; }
+    .tete h1 { font-size: 22px; }
+    #log { padding: 18px 16px 8px; }
+    #choix, #saisie { padding-left: 16px; padding-right: 16px; }
+    .mention { padding: 0 16px 10px; }
+    .outils select { max-width: 150px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="tete">
+  <div>
+    <h1 id="nomClub">Mon club</h1>
+    <p>Conseiller de séances</p>
+  </div>
+  <div class="outils">
+    <label class="vh" for="profils">Fiche en cours</label>
+    <select id="profils"></select>
+    <button type="button" class="btn" id="nouveau">Nouvelle personne</button>
+    <button type="button" class="btn mobile" id="voirFiche">Fiche</button>
+  </div>
+</header>
+<div class="couloirs" aria-hidden="true"></div>
+
+<main>
+  <section class="chat" aria-label="Conversation">
+    <div id="log" role="log" aria-live="polite"></div>
+    <div id="choix" aria-label="Réponses rapides"></div>
+    <form id="saisie" autocomplete="off">
+      <label class="vh" for="champ">Ton message</label>
+      <input id="champ" type="text" placeholder="Écris ta réponse…" maxlength="300">
+      <button class="btn plein" type="submit">Envoyer</button>
+    </form>
+    <p class="mention">Suggestions indicatives : elles ne remplacent ni l'avis de l'encadrant, ni un avis médical.</p>
+  </section>
+  <aside id="fiche" aria-label="Fiche de la personne"></aside>
+</main>
+
+<script>
+(() => {
+'use strict';
+
+/* =====================================================================
+   À PERSONNALISER : le nom du club et son planning hebdomadaire.
+   Les séances ci-dessous sont un EXEMPLE à remplacer par les vôtres.
+   - jour      : 0 = lundi … 6 = dimanche
+   - int       : intensité 1 (douce), 2 (modérée), 3 (soutenue)
+   - niv       : niveaux accueillis parmi 'deb', 'inter', 'conf'
+   - obj       : intérêt de 0 à 3 pour chaque objectif
+                 (forme, poids, endurance, force, souplesse, perf, convivial)
+   - sollicite : zones fortement sollicitées ('jambes', 'dos', 'epaule')
+                 -> la séance est écartée si la personne signale cette gêne
+   - bienfait  : zones pour lesquelles la séance est plutôt recommandée
+   ===================================================================== */
+const CLUB = { nom: 'AS Les Tilleuls' };
+
+const SEANCES = [
+  { id: 'renfo-midi', nom: 'Renfo express', famille: 'renfo', jour: 0, h: '12:15', duree: 45, int: 2, niv: ['deb', 'inter', 'conf'],
+    obj: { force: 3, forme: 2, poids: 2 }, sollicite: [], bienfait: [], lieu: 'Gymnase, salle 2', mots: ['renfo', 'express'] },
+  { id: 'footing', nom: 'Footing en groupe', famille: 'course', jour: 0, h: '18:30', duree: 60, int: 2, niv: ['deb', 'inter'],
+    obj: { endurance: 3, poids: 2, forme: 2, convivial: 2 }, sollicite: ['jambes'], bienfait: [], lieu: 'Stade, départ piste', mots: ['footing'] },
+  { id: 'prepa', nom: 'Préparation physique compétition', famille: 'renfo', jour: 0, h: '19:45', duree: 75, int: 3, niv: ['conf'],
+    obj: { perf: 3, force: 3, endurance: 1 }, sollicite: ['jambes', 'epaule'], bienfait: [], lieu: 'Gymnase, salle 1', mots: ['prepa', 'preparation'] },
+  { id: 'gym-douce', nom: 'Gym douce', famille: 'doux', jour: 1, h: '10:00', duree: 60, int: 1, niv: ['deb'],
+    obj: { forme: 3, souplesse: 2, convivial: 2 }, sollicite: [], bienfait: ['dos', 'jambes'], lieu: 'Gymnase, salle 2', mots: ['gym'] },
+  { id: 'boxe', nom: 'Cardio boxe (sans contact)', famille: 'cardio', jour: 1, h: '12:15', duree: 45, int: 3, niv: ['inter', 'conf'],
+    obj: { poids: 3, forme: 2, force: 1, endurance: 2 }, sollicite: ['epaule'], bienfait: [], lieu: 'Gymnase, salle 1', mots: ['boxe'] },
+  { id: 'fractionne', nom: 'Fractionné sur piste', famille: 'course', jour: 1, h: '19:00', duree: 75, int: 3, niv: ['inter', 'conf'],
+    obj: { perf: 3, endurance: 3, poids: 2 }, sollicite: ['jambes'], bienfait: [], lieu: 'Stade, piste', mots: ['fractionne', 'piste'] },
+  { id: 'circuit', nom: 'Circuit training', famille: 'cardio', jour: 2, h: '18:00', duree: 60, int: 3, niv: ['inter', 'conf'],
+    obj: { poids: 3, force: 2, forme: 2, perf: 1 }, sollicite: ['jambes', 'epaule'], bienfait: [], lieu: 'Gymnase, salle 1', mots: ['circuit'] },
+  { id: 'yoga', nom: 'Yoga et étirements', famille: 'doux', jour: 2, h: '19:15', duree: 60, int: 1, niv: ['deb', 'inter', 'conf'],
+    obj: { souplesse: 3, forme: 2 }, sollicite: [], bienfait: ['dos'], lieu: 'Gymnase, salle 2', mots: ['yoga', 'etirement'] },
+  { id: 'reveil', nom: 'Réveil sportif', famille: 'renfo', jour: 3, h: '07:00', duree: 40, int: 2, niv: ['deb', 'inter', 'conf'],
+    obj: { forme: 3, force: 1, poids: 1 }, sollicite: [], bienfait: [], lieu: 'Gymnase, salle 2', mots: ['reveil'] },
+  { id: 'nordique', nom: 'Marche nordique', famille: 'marche', jour: 3, h: '18:30', duree: 75, int: 1, niv: ['deb', 'inter'],
+    obj: { forme: 3, endurance: 2, poids: 2, convivial: 3 }, sollicite: [], bienfait: ['jambes'], lieu: 'Rendez-vous parking du stade', mots: ['marche nordique', 'nordique'] },
+  { id: 'renfo-soir', nom: 'Renforcement musculaire', famille: 'renfo', jour: 3, h: '19:30', duree: 60, int: 2, niv: ['deb', 'inter', 'conf'],
+    obj: { force: 3, forme: 2, poids: 1, perf: 1 }, sollicite: [], bienfait: [], lieu: 'Gymnase, salle 1', mots: ['renforcement', 'muscu'] },
+  { id: 'pilates', nom: 'Pilates et gainage', famille: 'doux', jour: 4, h: '12:15', duree: 45, int: 1, niv: ['deb', 'inter', 'conf'],
+    obj: { souplesse: 2, force: 2, forme: 2 }, sollicite: [], bienfait: ['dos'], lieu: 'Gymnase, salle 2', mots: ['pilates', 'gainage'] },
+  { id: 'collectif', nom: 'Sports collectifs loisir', famille: 'collectif', jour: 4, h: '18:30', duree: 90, int: 2, niv: ['deb', 'inter', 'conf'],
+    obj: { convivial: 3, forme: 2, endurance: 2, poids: 1 }, sollicite: ['jambes'], bienfait: [], lieu: 'Gymnase, grand terrain', mots: ['collectif', 'foot', 'basket', 'volley'] },
+  { id: 'initiation', nom: 'Initiation course : de 0 à 5 km', famille: 'course', jour: 5, h: '10:00', duree: 45, int: 1, niv: ['deb'],
+    obj: { endurance: 2, poids: 2, forme: 3 }, sollicite: ['jambes'], bienfait: [], lieu: 'Stade, piste', mots: ['initiation'] },
+  { id: 'sortie-longue', nom: 'Sortie longue', famille: 'course', jour: 5, h: '09:30', duree: 90, int: 2, niv: ['inter', 'conf'],
+    obj: { endurance: 3, perf: 2, poids: 2 }, sollicite: ['jambes'], bienfait: [], lieu: 'Départ du stade', mots: ['sortie longue', 'longue'] },
+  { id: 'aqua', nom: 'Natation loisir et aquagym', famille: 'eau', jour: 5, h: '11:15', duree: 45, int: 1, niv: ['deb', 'inter', 'conf'],
+    obj: { forme: 2, endurance: 2, poids: 2, souplesse: 1 }, sollicite: [], bienfait: ['jambes', 'dos'], lieu: 'Piscine municipale', mots: ['natation', 'aquagym', 'piscine'] },
+  { id: 'velo', nom: 'Sortie vélo', famille: 'velo', jour: 6, h: '09:30', duree: 120, int: 2, niv: ['inter', 'conf'],
+    obj: { endurance: 3, convivial: 2, poids: 2, perf: 1 }, sollicite: ['dos'], bienfait: [], lieu: 'Départ du stade', mots: ['velo'] },
+  { id: 'rando', nom: 'Marche conviviale', famille: 'marche', jour: 6, h: '10:00', duree: 120, int: 1, niv: ['deb', 'inter', 'conf'],
+    obj: { convivial: 3, forme: 2, endurance: 1 }, sollicite: [], bienfait: [], lieu: 'Rendez-vous parking du stade', mots: ['marche conviviale', 'rando'] }
+];
+
+/* ============================ Référentiels ============================ */
+const JOURS = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
+const JC = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+const INT = ['', 'douce', 'modérée', 'soutenue'];
+const OBJ = {
+  forme:     { label: 'Me remettre en forme',  court: 'remise en forme',    raison: 'bien pour retrouver la forme' },
+  poids:     { label: 'Perdre du poids',       court: 'perte de poids',     raison: 'bonne dépense énergétique' },
+  endurance: { label: 'Gagner en endurance',   court: 'endurance',          raison: "développe l'endurance" },
+  force:     { label: 'Me muscler',            court: 'renforcement',       raison: 'renforce les muscles' },
+  souplesse: { label: 'Souplesse et détente',  court: 'souplesse, détente', raison: 'travaille la souplesse et relâche les tensions' },
+  perf:      { label: 'Progresser, viser la compétition', court: 'performance', raison: 'fait progresser en performance' },
+  convivial: { label: 'Voir du monde',         court: 'convivialité',       raison: 'ambiance de groupe conviviale' }
+};
+const NIV = {
+  deb:   { label: 'Je débute ou je reprends', court: 'débutant ou reprise', rang: 0 },
+  inter: { label: 'Je pratique régulièrement', court: 'pratique régulière', rang: 1 },
+  conf:  { label: 'Sportif confirmé', court: 'confirmé', rang: 2 }
+};
+const MOM = {
+  matin:   { label: 'En semaine, le matin', court: 'le matin' },
+  midi:    { label: 'En semaine, le midi',  court: 'le midi' },
+  aprem:   { label: "En semaine, l'après-midi", court: "l'après-midi" },
+  soir:    { label: 'En semaine, le soir',  court: 'le soir' },
+  weekend: { label: 'Le week-end',          court: 'le week-end' }
+};
+const GENE = {
+  jambes: { label: 'Genou ou cheville', court: 'genou / cheville', ton: 'tes genoux et chevilles' },
+  dos:    { label: 'Dos',               court: 'dos',              ton: 'ton dos' },
+  epaule: { label: 'Épaule',            court: 'épaule',           ton: 'tes épaules' }
+};
+const ORDRE = ['prenom', 'objectifs', 'niveau', 'freq', 'dispo', 'genes'];
+
+/* ============================== Outils ============================== */
+const norm = t => String(t).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[’`]/g, "'");
+const esc = t => String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const liste = a => a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' et ' + a[a.length - 1];
+const pluriel = (n, mot) => n + ' ' + mot + (n > 1 ? 's' : '');
+const duree = m => m < 60 ? m + ' min' : Math.floor(m / 60) + ' h' + (m % 60 ? ' ' + String(m % 60).padStart(2, '0') : '');
+const heure = h => h.replace(/^0/, '').replace(':', ' h ').replace(' h 00', ' h');
+const tranche = x => { const h = parseInt(x.h, 10); return h < 12 ? 'matin' : h < 14 ? 'midi' : h < 17 ? 'aprem' : 'soir'; };
+const majuscule = t => t.toLowerCase().replace(/(^|[\s'-])(\p{L})/gu, (m, a, b) => a + b.toUpperCase());
+
+/* Le mot trouvé à la position idx est-il précédé d'une négation (dans la même proposition) ? */
+function nie(n, idx, rx, portee) {
+  let avant = n.slice(Math.max(0, idx - (portee || 18)), idx);
+  const coupe = Math.max(avant.lastIndexOf(','), avant.lastIndexOf('.'), avant.lastIndexOf(';'), avant.lastIndexOf('!'), avant.lastIndexOf(' mais '));
+  if (coupe >= 0) avant = avant.slice(coupe + 1);
+  return (rx || /\b(pas|sauf|jamais|hors|ni|sans)\b/).test(avant);
+}
+
+/* ====================== Compréhension du texte libre ====================== */
+const RX_OBJ = {
+  poids: /\b(poids|maigrir|mincir|kilos?|m'affiner)\b/,
+  forme: /\b(forme|bouger|sante|m'entretenir|entretien)\b/,
+  endurance: /\b(endurance|cardio|souffle|courir|marathon|semi|10 ?km|trail)\b/,
+  force: /\b(muscl\w*|force|renfo\w*|tonif\w*)\b/,
+  souplesse: /\b(soupl\w*|detente|destress\w*|stress|zen|mobilite|relax\w*|me detendre)\b/,
+  perf: /\b(compet\w*|perf\w*|progresser|chrono)\b/,
+  convivial: /\b(convivial\w*|rencontr\w*|amis?|voir du monde|ambiance|lien social)\b/
+};
+const RX_NIV = {
+  deb: /\b(debut\w*|novice|reprise|reprends?|sedentaire|jamais fait|pas sporti\w*|pas tres sporti\w*)\b/,
+  conf: /\b(confirmee?|avancee?|competiteur|competitrice|bon niveau|tres sporti\w*)\b/,
+  inter: /\b(regulier\w*|reguliere\w*|intermediaire|niveau moyen|de temps en temps)\b/
+};
+const RX_GENE = {
+  jambes: /\b(genoux?|chevilles?|menisque|ligaments?)\b/,
+  dos: /\b(dos|lombaires?|lombalgie|sciatique|hernie)\b/,
+  epaule: /\b(epaules?|coiffe)\b/
+};
+const NOMBRES = { un: 1, une: 1, deux: 2, trois: 3, quatre: 4, cinq: 5 };
+
+function analyser(texte, attendu) {
+  const n = norm(texte), maj = {};
+
+  const objs = Object.keys(RX_OBJ).filter(k => { const m = RX_OBJ[k].exec(n); return m && !nie(n, m.index, null, 12); });
+  if (objs.length) maj.objectifs = objs;
+
+  for (const k of ['deb', 'conf', 'inter']) { if (RX_NIV[k].test(n)) { maj.niveau = k; break; } }
+
+  let f = /\b(une?|deux|trois|quatre|cinq|[1-6])\s*(?:fois|x\b|(?:seances?|entrainements?|sorties?)\s+(?:par|\/)\s*semaine)/.exec(n)
+       || /\b([1-6])\s*(?:seances?|entrainements?)\b/.exec(n);
+  if (!f && attendu === 'freq') f = /^\s*(une?|deux|trois|quatre|cinq|[1-6])\s*$/.exec(n);
+  if (f) maj.freq = Math.max(1, Math.min(5, NOMBRES[f[1]] || parseInt(f[1], 10)));
+
+  // Disponibilités
+  const d = { moments: [], exclus: [], seuls: [] }, refuses = [];
+  let vu = false;
+  const n2 = n.replace(/apres[- ]?midis?/g, 'aprem');
+  const RX_MOM = { aprem: /\baprem\b/, midi: /\bmidi\b|pause dej/, soir: /\bsoirs?\b|\bsoiree|apres le (travail|boulot)/, matin: /\bmatin/, weekend: /week[- ]?ends?|\bwe\b/ };
+  for (const k in RX_MOM) {
+    const m = RX_MOM[k].exec(n2);
+    if (!m) continue;
+    vu = true;
+    (nie(n2, m.index) ? refuses : d.moments).push(k);
+  }
+  if (!d.moments.length && refuses.length) d.moments = ['matin', 'midi', 'aprem', 'soir', 'weekend'].filter(k => !refuses.includes(k));
+  JOURS.forEach((nom, j) => {
+    const rx = new RegExp('\\b' + nom + 's?\\b', 'g');
+    let m;
+    while ((m = rx.exec(n))) { vu = true; const cible = nie(n, m.index) ? d.exclus : d.seuls; if (!cible.includes(j)) cible.push(j); }
+  });
+  if (attendu === 'dispo' && !vu && /peu importe|n'importe|tout le temps|toujours|flexible|\blibre\b|tous les jours|quand vous voulez/.test(n)) vu = true;
+  if (vu) maj.dispo = d;
+
+  // Zones à ménager
+  const genes = Object.keys(RX_GENE).filter(k => { const m = RX_GENE[k].exec(n); return m && !nie(n, m.index, /\b(pas de|aucun|aucune|sans|plus de)\b/, 30); });
+  if (genes.length) maj.genes = genes;
+  else if (attendu === 'genes' && /\b(aucun|aucune|non|rien|ras|nickel|tout va bien|pas de (gene|douleur|probleme|blessure|souci)s?)\b/.test(n)) maj.genes = [];
+
+  // Prénom
+  const brut = String(texte).replace(/[’`]/g, "'").trim();
+  const pm = /(?:je m'appelle|moi c'est|mon pr[ée]nom est|pr[ée]nom\s*:)\s*(\p{L}[\p{L}'-]*)/iu.exec(brut);
+  if (pm) maj.prenom = majuscule(pm[1]);
+  else if (attendu === 'prenom' && !Object.keys(maj).length
+           && brut.split(/\s+/).length <= 2 && brut.length <= 24 && /^[\p{L}' -]+$/u.test(brut)
+           && !/^(bonjour|bonsoir|salut|hello|coucou|oui|non|ok)$/.test(n.trim())) maj.prenom = majuscule(brut);
+  return maj;
+}
+
+/* ========================= Moteur de recommandation ========================= */
+function dispoOK(x, d) {
+  if (d.exclus.includes(x.jour)) return false;
+  const seulsSem = d.seuls.filter(j => j < 5), seulsWe = d.seuls.filter(j => j >= 5);
+  if (x.jour >= 5) {
+    if (seulsWe.length) return seulsWe.includes(x.jour);
+    if (d.moments.includes('weekend')) return true;
+    return !d.seuls.length && !d.moments.length;
+  }
+  if (seulsSem.length && !seulsSem.includes(x.jour)) return false;
+  const sem = d.moments.filter(m => m !== 'weekend');
+  if (sem.length) return sem.includes(tranche(x));
+  return seulsSem.length > 0 || (!d.moments.length && !seulsWe.length);
+}
+
+function calculer(p) {
+  const s = p.slots, rang = NIV[s.niveau].rang;
+  let pool = SEANCES.filter(x => !p.refus.includes(x.id));
+  const avant = pool.length;
+  pool = pool.filter(x => !x.sollicite.some(g => s.genes.includes(g)));
+  const ecartees = avant - pool.length;
+  pool = pool.filter(x => rang >= Math.min(...x.niv.map(k => NIV[k].rang)));
+
+  const cible = Math.max(1, Math.min(3, [1.4, 2, 2.6][rang] + p.bias * 0.8));
+  const notes = pool.map(x => {
+    let sc = 0;
+    s.objectifs.forEach(o => { sc += (x.obj[o] || 0) * 3; });
+    if (rang > Math.max(...x.niv.map(k => NIV[k].rang))) sc -= 4;
+    sc -= Math.abs(x.int - cible) * 2.5;
+    if (x.bienfait.some(g => s.genes.includes(g))) sc += 3;
+    const hors = !dispoOK(x, s.dispo);
+    if (hors) sc -= 50;
+    return { x, sc, hors };
+  });
+
+  const choix = [];
+  const voisins = (a, b) => { const e = Math.abs(a - b); return e === 1 || e === 6; };
+  while (choix.length < s.freq) {
+    let best = null;
+    for (const c of notes) {
+      if (choix.some(k => k.x.jour === c.x.jour)) continue;
+      let v = c.sc;
+      v -= 4 * choix.filter(k => k.x.famille === c.x.famille).length;
+      if (c.x.int === 3 && choix.some(k => k.x.int === 3 && voisins(k.x.jour, c.x.jour))) v -= 5;
+      if (rang === 0 && choix.some(k => voisins(k.x.jour, c.x.jour))) v -= 2;
+      if (!best || v > best.v) best = { c, v };
+    }
+    if (!best) break;
+    choix.push(best.c);
+  }
+  choix.sort((a, b) => a.x.jour - b.x.jour || a.x.h.localeCompare(b.x.h));
+  choix.forEach(c => { c.raisons = raisons(c, s); });
+  return { choix, ecartees, dansCreneaux: choix.filter(c => !c.hors).length };
+}
+
+function raisons(c, s) {
+  const x = c.x, r = [];
+  const o = s.objectifs.slice().sort((a, b) => (x.obj[b] || 0) - (x.obj[a] || 0))[0];
+  if (o && (x.obj[o] || 0) >= 2) r.push(OBJ[o].raison);
+  if (s.niveau === 'deb' && x.niv.includes('deb')) r.push('accessible quand on débute');
+  if (s.niveau === 'conf' && x.int === 3) r.push('rythme soutenu, adapté à ton niveau');
+  const bons = x.bienfait.filter(g => s.genes.includes(g));
+  if (bons.length) r.push('ménage ' + liste(bons.map(g => GENE[g].ton)));
+  if (c.hors) r.push('en dehors des créneaux que tu as indiqués');
+  if (!r.length) r.push('complète bien le reste de ta semaine');
+  return r;
+}
+
+function txtDispo(d) {
+  const t = [];
+  if (d.seuls.length) t.push(liste(d.seuls.slice().sort().map(j => JOURS[j])));
+  if (d.moments.length) t.push(liste(d.moments.map(m => MOM[m].court)));
+  if (d.exclus.length) t.push('sauf ' + liste(d.exclus.slice().sort().map(j => JOURS[j])));
+  return t.length ? t.join(', ') : 'tous les créneaux';
+}
+function resume(k, s) {
+  const v = s[k];
+  if (v == null) return null;
+  if (k === 'prenom') return v || 'non précisé';
+  if (k === 'objectifs') return liste(v.map(o => OBJ[o].court));
+  if (k === 'niveau') return NIV[v].court;
+  if (k === 'freq') return pluriel(v, 'séance') + ' par semaine';
+  if (k === 'dispo') return txtDispo(v);
+  if (k === 'genes') return v.length ? liste(v.map(g => GENE[g].court)) : 'aucune';
+}
+
+/* Fusionne ce qui a été compris dans la fiche ; renvoie les rubriques modifiées. */
+function appliquer(p, maj) {
+  const change = [];
+  for (const k of ORDRE) {
+    if (!(k in maj)) continue;
+    if (k === 'dispo' && p.slots.dispo) {
+      const a = p.slots.dispo, b = maj.dispo;
+      p.slots.dispo = {
+        moments: b.moments.length ? b.moments : a.moments,
+        seuls: b.seuls.length ? b.seuls : a.seuls.filter(j => !b.exclus.includes(j)),
+        exclus: [...new Set([...a.exclus, ...b.exclus])].filter(j => !b.seuls.includes(j))
+      };
+    } else p.slots[k] = maj[k];
+    change.push(k);
+  }
+  return change;
+}
+
+function nouveauProfil() {
+  return { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+           slots: { prenom: null, objectifs: null, niveau: null, freq: null, dispo: null, genes: null }, bias: 0, refus: [] };
+}
+
+if (typeof document === 'undefined') { globalThis.__test = { analyser, calculer, appliquer, nouveauProfil, dispoOK, resume, SEANCES }; return; }
+
+/* ============================== Interface ============================== */
+const $ = id => document.getElementById(id);
+const log = $('log'), choix = $('choix'), champ = $('champ'), fiche = $('fiche'), selProfils = $('profils');
+const REDUIT = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const CLE = 'club-seances-v1';
+
+document.title = 'Conseiller de séances · ' + CLUB.nom;
+$('nomClub').textContent = CLUB.nom;
+
+let etat = charger();
+let attendu = null;      // rubrique dont on attend la réponse
+let derniers = [];       // dernière sélection proposée
+let file = Promise.resolve();
+const enfile = fn => (file = file.then(fn).catch(e => console.error(e)));
+
+function charger() {
+  try {
+    const d = JSON.parse(localStorage.getItem(CLE));
+    if (d && Array.isArray(d.profils) && d.profils.length && d.profils.every(p => p && p.slots && Array.isArray(p.refus))) return d;
+  } catch (e) { /* stockage indisponible : on continue sans mémoire */ }
+  const p = nouveauProfil();
+  return { profils: [p], courant: p.id };
+}
+function sauver() { try { localStorage.setItem(CLE, JSON.stringify(etat)); } catch (e) { /* idem */ } }
+const cur = () => etat.profils.find(p => p.id === etat.courant) || etat.profils[0];
+const manquant = () => ORDRE.find(k => cur().slots[k] == null);
+
+/* ---- Messages ---- */
+const pause = ms => new Promise(r => setTimeout(r, ms));
+function cadrer(el) {
+  log.scrollTop = log.scrollHeight;
+  if (el && el.offsetHeight > log.clientHeight - 24) log.scrollTop = el.offsetTop - 12;
+}
+async function dire(html) {
+  const el = document.createElement('div');
+  el.className = 'msg bot';
+  el.innerHTML = '<span class="pts" aria-hidden="true"><i></i><i></i><i></i></span>';
+  log.appendChild(el); cadrer();
+  await pause(REDUIT ? 0 : Math.min(650, 250 + html.length * 0.8));
+  el.innerHTML = html; cadrer(el);
+}
+function direUser(texte) {
+  const el = document.createElement('div');
+  el.className = 'msg user'; el.textContent = texte;
+  log.appendChild(el); cadrer();
+}
+
+/* ---- Réponses rapides ---- */
+function puces(items, multi) {
+  choix.innerHTML = '';
+  const bouton = (l, fn) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'puce'; b.textContent = l; b.onclick = fn; choix.appendChild(b); return b; };
+  if (multi) {
+    const sel = new Set();
+    let ok;
+    multi.opts.forEach(o => {
+      const b = bouton(o.l, () => {
+        sel.has(o.id) ? sel.delete(o.id) : sel.add(o.id);
+        b.setAttribute('aria-pressed', sel.has(o.id)); ok.disabled = !sel.size;
+      });
+      b.setAttribute('aria-pressed', 'false');
+    });
+    bouton(multi.libre.l, () => repondre(multi.libre.l, multi.libre.set));
+    ok = document.createElement('button');
+    ok.type = 'button'; ok.className = 'btn plein'; ok.textContent = 'Valider'; ok.disabled = true;
+    ok.onclick = () => { const ids = multi.opts.filter(o => sel.has(o.id)); repondre(liste(ids.map(o => o.l)), multi.build(ids.map(o => o.id))); };
+    choix.appendChild(ok);
+    return;
+  }
+  (items || []).forEach(it => bouton(it.l, () => it.act ? it.act() : it.txt ? envoyer(it.txt) : repondre(it.l, it.set)));
+}
+
+const QUESTIONS = {
+  prenom: { t: () => 'Pour commencer, quel est ton prénom ?', chips: [{ l: 'Passer', set: { prenom: '' } }] },
+  objectifs: { t: p => (p.slots.prenom ? esc(p.slots.prenom) + ', q' : 'Q') + "u'est-ce que tu viens chercher au club en priorité ?",
+    chips: Object.keys(OBJ).map(k => ({ l: OBJ[k].label, set: { objectifs: [k] } })) },
+  niveau: { t: () => 'Où en es-tu côté pratique sportive ?', chips: Object.keys(NIV).map(k => ({ l: NIV[k].label, set: { niveau: k } })) },
+  freq: { t: () => 'Combien de séances par semaine te paraît tenable ?', chips: [1, 2, 3, 4].map(n => ({ l: pluriel(n, 'séance'), set: { freq: n } })) },
+  dispo: { t: () => "Quand es-tu disponible ? Tu peux cocher plusieurs réponses, ou m'écrire des jours précis (« mardi et jeudi soir », « pas le lundi »).",
+    multi: { opts: ['matin', 'midi', 'soir', 'weekend'].map(k => ({ id: k, l: MOM[k].label })),
+             build: ids => ({ dispo: { moments: ids, exclus: [], seuls: [] } }),
+             libre: { l: 'Peu importe', set: { dispo: { moments: [], exclus: [], seuls: [] } } } } },
+  genes: { t: () => 'Dernière question : y a-t-il une zone à ménager en ce moment (douleur, blessure récente) ?',
+    multi: { opts: Object.keys(GENE).map(k => ({ id: k, l: GENE[k].label })),
+             build: ids => ({ genes: ids }),
+             libre: { l: 'Aucune', set: { genes: [] } } } }
+};
+const SUIVI = [
+  { l: 'Plus doux', txt: 'Plus doux' }, { l: 'Plus intense', txt: 'Plus intense' },
+  { l: 'Une séance de plus', txt: 'Une séance de plus' }, { l: 'Changer une séance', txt: 'Changer une séance' },
+  { l: 'Voir tout le planning', txt: 'Voir tout le planning' }
+];
+
+async function poser(k, silencieux) {
+  attendu = k;
+  const q = QUESTIONS[k];
+  if (!silencieux) await dire('<p>' + q.t(cur()) + '</p>');
+  puces(q.chips, q.multi);
+}
+async function suite(intro) {
+  sauver(); majProfils(); majFiche();
+  const k = manquant();
+  if (k) await poser(k); else await recommander(intro);
+}
+
+/* ---- Rendu d'une sélection ---- */
+function carte(c) {
+  const x = c.x;
+  const barres = [1, 2, 3].map(i => '<i' + (i <= x.int ? ' class="on"' : '') + '></i>').join('');
+  return '<article class="seance' + (c.hors ? ' hors' : '') + '">'
+    + '<div class="quand"><b>' + JC[x.jour] + '</b><span>' + heure(x.h) + '</span></div>'
+    + '<div class="quoi"><h3>' + esc(x.nom) + '</h3>'
+    + '<p class="meta"><span class="int" aria-hidden="true">' + barres + '</span>Intensité ' + INT[x.int] + ' · ' + duree(x.duree) + ' · ' + esc(x.lieu) + '</p>'
+    + '<p class="raisons">' + esc(majusculeDebut(c.raisons.join(', '))) + '.</p></div></article>';
+}
+const majusculeDebut = t => t.charAt(0).toUpperCase() + t.slice(1);
+
+async function recommander(intro) {
+  attendu = null;
+  const p = cur(), s = p.slots, r = calculer(p);
+  derniers = r.choix; majFiche();
+  if (!r.choix.length) {
+    await dire("<p>Je ne trouve aucune séance compatible avec l'ensemble de ces critères. Tu peux modifier une rubrique dans la fiche, ou regarder le planning complet.</p>");
+    puces([{ l: 'Voir tout le planning', txt: 'Voir tout le planning' }, { l: 'Revoir mes disponibilités', act: () => modifier('dispo') }]);
+    return;
+  }
+  const notes = [];
+  if (r.choix.length < s.freq) notes.push('Je ne peux proposer que ' + pluriel(r.choix.length, 'séance') + ' sur les ' + s.freq + ' souhaitées : il ne reste pas assez de séances adaptées sur des jours différents.');
+  if (r.dansCreneaux < r.choix.length) notes.push((r.dansCreneaux ? 'Seulement ' + pluriel(r.dansCreneaux, 'séance') + ' tombe' + (r.dansCreneaux > 1 ? 'nt' : '') + ' dans tes créneaux' : 'Aucune séance adaptée ne tombe dans tes créneaux') + ' : les cartes en pointillés sont en dehors, à toi de voir si tu peux te libérer.');
+  if (r.ecartees) notes.push("J'ai écarté " + pluriel(r.ecartees, 'séance') + ' qui sollicite' + (r.ecartees > 1 ? 'nt' : '') + ' trop ' + liste(s.genes.map(g => GENE[g].ton)) + '.');
+  if (s.genes.length) notes.push("Signale ta gêne à l'encadrant en arrivant, les exercices peuvent être adaptés. Si la douleur persiste ou augmente, demande un avis médical avant de continuer.");
+  if (s.niveau === 'deb' && r.choix.length > 1) notes.push('Les premières semaines, garde si possible un jour de repos entre deux séances.');
+  const nom = s.prenom ? ', ' + esc(s.prenom) : '';
+  await dire('<p>' + (intro || 'Voici ce que je te propose' + nom) + ' : <strong>' + pluriel(r.choix.length, 'séance') + ' par semaine</strong>.</p>'
+    + '<div class="seances">' + r.choix.map(carte).join('') + '</div>'
+    + (notes.length ? '<ul class="notes">' + notes.map(t => '<li>' + t + '</li>').join('') + '</ul>' : '')
+    + "<p>Dis-moi si tu veux ajuster quelque chose.</p>");
+  puces(SUIVI);
+}
+
+async function planning() {
+  const tri = SEANCES.slice().sort((a, b) => a.jour - b.jour || a.h.localeCompare(b.h));
+  await dire('<p>Le planning complet du club :</p><ul class="planning">'
+    + tri.map(x => '<li><b>' + JC[x.jour] + '</b><span>' + heure(x.h) + '</span><div>' + esc(x.nom) + ' · intensité ' + INT[x.int] + '</div></li>').join('') + '</ul>');
+}
+
+/* ---- Traitement des réponses ---- */
+function repondre(label, set) {
+  choix.innerHTML = '';
+  direUser(label);
+  enfile(async () => {
+    const p = cur(), etaitPrenom = attendu === 'prenom';
+    appliquer(p, set);
+    if (etaitPrenom && p.slots.prenom) await dire('<p>Ravi de te rencontrer, ' + esc(p.slots.prenom) + '.</p>');
+    await suite();
+  });
+}
+function envoyer(texte) {
+  texte = texte.trim();
+  if (!texte) return;
+  choix.innerHTML = '';
+  direUser(texte);
+  enfile(() => traiter(texte));
+}
+
+async function traiter(texte) {
+  const p = cur(), n = norm(texte), complet = !manquant();
+
+  if (/\b(recommenc\w*|nouvelle personne|nouveau profil|quelqu'un d'autre|autre personne)\b/.test(n)) { creer(); return; }
+  if (/planning|toutes les seances|programme du club|\bhoraires?\b/.test(n)) {
+    await planning();
+    if (complet) puces(SUIVI); else await poser(manquant(), true);
+    return;
+  }
+
+  if (complet) {
+    if (/plus (doux|douce|facile|tranquille|cool|leger)|moins (intense|dur|difficile|fatigant)|trop (dur|intense|difficile|fatigant)/.test(n)) {
+      if (p.bias <= -1) { await dire("<p>Je suis déjà sur les séances les plus douces compatibles avec ta fiche. Tu peux aussi réduire le nombre de séances.</p>"); puces(SUIVI); return; }
+      p.bias--; return suite("J'ai allégé la sélection");
+    }
+    if (/plus (intense|dur|difficile|sportif|corse|costaud|soutenu)|moins (facile|doux|tranquille)|trop (facile|doux|tranquille|leger)/.test(n)) {
+      if (p.bias >= 1) { await dire("<p>Je suis déjà sur les séances les plus soutenues accessibles à ton niveau.</p>"); puces(SUIVI); return; }
+      p.bias++; return suite("J'ai relevé l'intensité");
+    }
+    if (/\b(une?|1) (seance |jour )?(de|en) plus\b|\b(r?ajoute)/.test(n)) {
+      if (p.slots.freq >= 5) { await dire('<p>Cinq séances par semaine, c\'est déjà le maximum que je conseille : le repos fait partie de l\'entraînement.</p>'); puces(SUIVI); return; }
+      p.slots.freq++; return suite('Avec une séance de plus');
+    }
+    if (/\b(une?|1) (seance |jour )?(de|en) moins\b|moins de seances|(enleve|retire|supprime) une seance/.test(n)) {
+      if (p.slots.freq <= 1) { await dire('<p>Il ne reste déjà qu\'une séance par semaine.</p>'); puces(SUIVI); return; }
+      p.slots.freq--; return suite('Avec une séance de moins');
+    }
+    if (/remplace|\bchange|autre seance|autre chose|n'aime pas|pas envie|pas fan|\benleve|\bretire/.test(n)) {
+      const cible = derniers.find(c => c.x.mots.some(m => n.includes(m))) || derniers.find(c => new RegExp('\\b' + JOURS[c.x.jour] + '\\b').test(n));
+      if (cible) return refuser(cible.x);
+      await dire('<p>Laquelle veux-tu remplacer ?</p>');
+      puces(derniers.map(c => ({ l: JC[c.x.jour] + ' · ' + c.x.nom, act: () => { choix.innerHTML = ''; direUser(c.x.nom); enfile(() => refuser(c.x)); } })));
+      return;
+    }
+    if (/pourquoi|comment tu (choisis|fais)|sur quoi/.test(n)) {
+      await dire('<p>Je pars du planning du club et je croise quatre choses : ton objectif, ton niveau, tes créneaux et les zones à ménager. '
+        + "J'évite aussi deux séances le même jour, deux séances soutenues deux jours de suite, et je varie les activités.</p>"
+        + '<ul class="notes">' + derniers.map(c => '<li><strong>' + esc(c.x.nom) + '</strong> : ' + esc(c.raisons.join(', ')) + '.</li>').join('') + '</ul>');
+      puces(SUIVI); return;
+    }
+    if (/^\s*(merci|super|parfait|top|genial|ok|d'accord|ca marche)\b/.test(n)) {
+      await dire('<p>Avec plaisir. Bonnes séances' + (p.slots.prenom ? ', ' + esc(p.slots.prenom) : '') + ' ! La fiche reste enregistrée dans ce navigateur.</p>');
+      puces(SUIVI.concat([{ l: 'Nouvelle personne', act: creer }])); return;
+    }
+  }
+
+  const etaitAttendu = attendu;
+  const change = appliquer(p, analyser(texte, attendu));
+  if (!change.length) {
+    if (complet) {
+      await dire("<p>Je n'ai pas saisi. Tu peux me demander d'alléger ou de corser la semaine, d'ajouter ou de remplacer une séance, ou me donner un nouveau critère (« pas le mardi », « plutôt du renforcement »).</p>");
+      puces(SUIVI);
+    } else {
+      await dire(etaitAttendu === 'prenom' ? "<p>Je n'ai pas reconnu de prénom. Tu peux l'écrire seul, ou passer cette étape.</p>"
+                                           : "<p>Je n'ai pas bien compris. Choisis une réponse ci-dessous ou reformule.</p>");
+      await poser(manquant(), true);
+    }
+    return;
+  }
+  if (complet) return suite("C'est noté, voici la sélection mise à jour");
+  const autres = change.filter(k => k !== 'prenom');
+  if (change.includes('prenom') && p.slots.prenom) await dire('<p>Ravi de te rencontrer, ' + esc(p.slots.prenom) + '.</p>');
+  if (autres.length && !(autres.length === 1 && autres[0] === etaitAttendu)) {
+    await dire('<p>Noté : ' + esc(autres.map(k => resume(k, p.slots)).join(' ; ')) + '.</p>');
+  }
+  await suite();
+}
+
+async function refuser(x) {
+  const p = cur();
+  if (!p.refus.includes(x.id)) p.refus.push(x.id);
+  await suite('J\'ai retiré « ' + esc(x.nom) + ' »');
+}
+
+/* ---- Fiches ---- */
+function majProfils() {
+  selProfils.innerHTML = '';
+  etat.profils.forEach((p, i) => {
+    const o = document.createElement('option');
+    o.value = p.id; o.textContent = p.slots.prenom || 'Fiche ' + (i + 1);
+    o.selected = p.id === etat.courant;
+    selProfils.appendChild(o);
+  });
+}
+const LIBELLES = { objectifs: 'Objectif', niveau: 'Niveau', freq: 'Rythme', dispo: 'Disponibilités', genes: 'Zone à ménager' };
+function majFiche() {
+  const p = cur(), s = p.slots, complet = !manquant();
+  let h = '<button type="button" class="btn mobile" data-fermer style="float:right">Fermer</button>'
+    + '<h2>Fiche</h2><p class="nom">' + (s.prenom ? esc(s.prenom) : 'Nouvelle personne') + '</p><dl class="lignes">';
+  for (const k in LIBELLES) {
+    const v = resume(k, s);
+    h += '<div><dt>' + LIBELLES[k] + '</dt><dd' + (v == null ? ' class="vide">à préciser' : '>' + esc(majusculeDebut(v))) + '</dd>'
+      + (v == null ? '' : '<button type="button" class="lien" data-modif="' + k + '" aria-label="Modifier : ' + LIBELLES[k] + '">Modifier</button>') + '</div>';
+  }
+  h += '</dl><h2>Semaine type</h2>';
+  if (complet) {
+    h += '<ul class="semaine">' + JC.map((j, i) => {
+      const c = derniers.find(d => d.x.jour === i);
+      return c ? '<li class="actif"><b>' + j + '</b><span>' + esc(c.x.nom) + '<small>' + heure(c.x.h) + ' · ' + duree(c.x.duree) + '</small></span></li>'
+               : '<li><b>' + j + '</b><span>Repos</span></li>';
+    }).join('') + '</ul>';
+  } else h += '<p class="attente">Elle apparaîtra ici une fois les questions terminées.</p>';
+  h += '<button type="button" class="lien" data-suppr>Supprimer cette fiche</button>';
+  fiche.innerHTML = h;
+}
+function modifier(k) {
+  document.body.classList.remove('fiche-ouverte');
+  choix.innerHTML = '';
+  enfile(async () => {
+    cur().slots[k] = null; cur().refus = []; derniers = [];
+    sauver(); majFiche();
+    await dire('<p>On revoit ça.</p>');
+    await poser(k);
+  });
+}
+function ouvrir(id) {
+  etat.courant = id; sauver();
+  log.innerHTML = ''; choix.innerHTML = ''; derniers = []; attendu = null;
+  document.body.classList.remove('fiche-ouverte');
+  majProfils(); majFiche();
+  enfile(async () => {
+    const p = cur();
+    if (!manquant()) return recommander('On reprend la fiche' + (p.slots.prenom ? ' de ' + esc(p.slots.prenom) : '') + '. Sa sélection actuelle');
+    await dire('<p>Bonjour ! Je suis le conseiller de séances de ' + esc(CLUB.nom) + '. En quelques questions, je te propose les séances de la semaine qui te correspondent.</p>'
+      + "<p>Tu peux cliquer sur les réponses ou tout m'écrire d'un coup, par exemple « je débute, je veux retrouver la forme, dispo mardi et jeudi soir ».</p>");
+    await poser(manquant());
+  });
+}
+function creer() {
+  const p = nouveauProfil();
+  etat.profils.push(p);
+  ouvrir(p.id);
+}
+
+/* ---- Événements ---- */
+$('saisie').addEventListener('submit', e => { e.preventDefault(); const t = champ.value; champ.value = ''; envoyer(t); });
+$('nouveau').addEventListener('click', creer);
+selProfils.addEventListener('change', () => ouvrir(selProfils.value));
+$('voirFiche').addEventListener('click', () => document.body.classList.add('fiche-ouverte'));
+fiche.addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  if ('fermer' in b.dataset) document.body.classList.remove('fiche-ouverte');
+  else if (b.dataset.modif) modifier(b.dataset.modif);
+  else if ('suppr' in b.dataset) {
+    const nom = cur().slots.prenom;
+    if (!confirm('Supprimer ' + (nom ? 'la fiche de ' + nom : 'cette fiche') + ' ?')) return;
+    etat.profils = etat.profils.filter(p => p.id !== etat.courant);
+    if (!etat.profils.length) etat.profils.push(nouveauProfil());
+    ouvrir(etat.profils[0].id);
+  }
+});
+
+ouvrir(cur().id);
+})();
+</script>
+</body>
+</html>

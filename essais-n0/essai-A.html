@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Coach du club</title>
+<style>
+  :root {
+    --fond: #f2eee4;
+    --surface: #fffdf8;
+    --creux: #e9e3d5;
+    --encre: #17241d;
+    --discret: #56645b;
+    --trait: #d6cfbf;
+    --club: #14523b;
+    --club-fort: #0e3d2c;
+    --sur-club: #ffffff;
+    --plot: #c9471a;
+    --plot-doux: #fbe6da;
+    --ombre: 0 1px 2px rgba(23, 36, 29, .06), 0 6px 18px rgba(23, 36, 29, .06);
+    --titre: "Avenir Next Condensed", "Barlow Condensed", "Roboto Condensed", "Arial Narrow", system-ui, sans-serif;
+    --texte: "Avenir Next", "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --fond: #0f1713;
+      --surface: #18231d;
+      --creux: #1f2d25;
+      --encre: #e8efe9;
+      --discret: #9caba1;
+      --trait: #2c3d33;
+      --club: #5cc798;
+      --club-fort: #7ad8ad;
+      --sur-club: #0b1a13;
+      --plot: #ff8f5c;
+      --plot-doux: #3a2418;
+      --ombre: 0 1px 2px rgba(0, 0, 0, .3), 0 6px 18px rgba(0, 0, 0, .25);
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--fond);
+    color: var(--encre);
+    font: 16px/1.5 var(--texte);
+    display: grid;
+    grid-template-rows: auto 1fr;
+    height: 100vh;
+    height: 100dvh;
+    -webkit-font-smoothing: antialiased;
+  }
+  button, input, select { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  :focus-visible { outline: 3px solid var(--plot); outline-offset: 2px; border-radius: 6px; }
+
+  /* ---------- En-tête ---------- */
+  .entete {
+    background: var(--club);
+    color: var(--sur-club);
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .blason {
+    width: 40px; height: 40px; flex: none;
+    border: 2px solid currentColor;
+    border-radius: 50%;
+    display: grid; place-items: center;
+    font: 700 15px/1 var(--titre);
+    letter-spacing: .04em;
+    position: relative;
+  }
+  .blason::after {
+    content: ""; position: absolute; left: 50%; top: -2px; bottom: -2px;
+    border-left: 2px solid currentColor; opacity: .35;
+  }
+  .blason span { position: relative; z-index: 1; background: var(--club); padding: 2px 3px; }
+  .entete h1 {
+    margin: 0;
+    font: 700 22px/1.1 var(--titre);
+    letter-spacing: .05em;
+    text-transform: uppercase;
+  }
+  .entete p { margin: 2px 0 0; font-size: 13px; opacity: .85; }
+  .entete .qui { margin-left: auto; display: flex; align-items: center; gap: 8px; font-size: 14px; }
+  .entete select {
+    background: transparent;
+    color: inherit;
+    border: 1.5px solid currentColor;
+    border-radius: 999px;
+    padding: 6px 12px;
+    max-width: 180px;
+  }
+  .entete select option { color: #17241d; background: #fff; }
+
+  /* ---------- Mise en page ---------- */
+  main {
+    min-height: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    max-width: 1120px;
+    width: 100%;
+    margin: 0 auto;
+  }
+  .chat { min-height: 0; display: flex; flex-direction: column; }
+  .fil {
+    flex: 1; min-height: 0;
+    overflow-y: auto;
+    padding: 24px 20px 12px;
+    display: flex; flex-direction: column; gap: 10px;
+    scroll-behavior: smooth;
+  }
+
+  /* ---------- Bulles ---------- */
+  .msg { max-width: min(88%, 620px); overflow-wrap: anywhere; }
+  .msg p { margin: 0; }
+  .msg p + p { margin-top: 8px; }
+  .msg.coach {
+    align-self: flex-start;
+    background: var(--surface);
+    border: 1px solid var(--trait);
+    border-radius: 4px 16px 16px 16px;
+    padding: 11px 15px;
+    box-shadow: var(--ombre);
+  }
+  .msg.moi {
+    align-self: flex-end;
+    background: var(--club);
+    color: var(--sur-club);
+    border-radius: 16px 4px 16px 16px;
+    padding: 9px 15px;
+  }
+  .msg.large { max-width: min(100%, 680px); width: 100%; }
+  .msg { animation: arrive .22s ease-out both; }
+  @keyframes arrive { from { opacity: 0; transform: translateY(6px); } }
+
+  .ecrit { display: inline-flex; gap: 5px; padding: 4px 0; }
+  .ecrit i {
+    width: 7px; height: 7px; border-radius: 50%; background: var(--discret);
+    animation: rebond 1s infinite ease-in-out;
+  }
+  .ecrit i:nth-child(2) { animation-delay: .15s; }
+  .ecrit i:nth-child(3) { animation-delay: .3s; }
+  @keyframes rebond { 0%, 60%, 100% { opacity: .3; transform: none; } 30% { opacity: 1; transform: translateY(-3px); } }
+
+  /* ---------- Cartes séance ---------- */
+  .seances { list-style: none; margin: 12px 0 4px; padding: 0; display: grid; gap: 10px; }
+  .seance {
+    display: grid;
+    grid-template-columns: 78px minmax(0, 1fr);
+    background: var(--fond);
+    border: 1px solid var(--trait);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .seance .quand {
+    background: var(--club);
+    color: var(--sur-club);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 10px 6px;
+    text-align: center;
+  }
+  .seance .quand b { font: 700 19px/1 var(--titre); letter-spacing: .06em; text-transform: uppercase; }
+  .seance .quand span { font-size: 14px; margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .seance .quoi { padding: 10px 13px 11px; }
+  .seance h3 { margin: 0; font: 700 18px/1.2 var(--titre); letter-spacing: .02em; }
+  .seance .infos { color: var(--discret); font-size: 13.5px; margin-top: 2px; }
+  .seance .pourquoi { font-size: 14.5px; margin-top: 7px; }
+  .seance .pourquoi::first-letter { text-transform: uppercase; }
+  .effort { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+  .effort .pips { display: inline-flex; gap: 3px; }
+  .effort .pips i { width: 9px; height: 9px; border-radius: 2px; background: var(--trait); transform: skewX(-12deg); }
+  .effort .pips i.on { background: var(--plot); }
+  .etiquette {
+    display: inline-block; margin-top: 7px;
+    background: var(--plot-doux); color: var(--plot);
+    font-size: 12.5px; font-weight: 600;
+    padding: 2px 8px; border-radius: 999px;
+  }
+  .note { color: var(--discret); font-size: 14px; margin-top: 10px !important; }
+  .liste-simple { margin: 8px 0 0; padding-left: 18px; font-size: 14.5px; }
+  .liste-simple li + li { margin-top: 3px; }
+
+  /* ---------- Saisie ---------- */
+  .saisie {
+    border-top: 1px solid var(--trait);
+    background: var(--fond);
+    padding: 10px 20px 16px;
+  }
+  .choix { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+  .choix:empty { display: none; }
+  .puce {
+    background: var(--surface);
+    border: 1.5px solid var(--club);
+    color: var(--club);
+    border-radius: 999px;
+    padding: 9px 15px;
+    min-height: 42px;
+    font-weight: 600;
+    font-size: 15px;
+    transition: background .12s, color .12s, transform .08s;
+  }
+  .puce:hover { background: var(--creux); }
+  .puce:active { transform: scale(.97); }
+  .puce[aria-pressed="true"] { background: var(--club); color: var(--sur-club); }
+  .puce.valider { background: var(--plot); border-color: var(--plot); color: #fff; }
+  .puce.valider:disabled { opacity: .4; cursor: not-allowed; }
+  @media (prefers-color-scheme: dark) { .puce.valider { color: #1a0d05; } }
+
+  .barre { display: flex; gap: 8px; }
+  .barre input {
+    flex: 1; min-width: 0;
+    background: var(--surface);
+    border: 1.5px solid var(--trait);
+    border-radius: 12px;
+    padding: 12px 14px;
+  }
+  .barre input::placeholder { color: var(--discret); }
+  .barre input:focus { outline: none; border-color: var(--club); box-shadow: 0 0 0 3px color-mix(in srgb, var(--club) 22%, transparent); }
+  .barre button {
+    background: var(--club); color: var(--sur-club);
+    border: 0; border-radius: 12px;
+    padding: 0 20px; font-weight: 700;
+  }
+  .barre button:hover { background: var(--club-fort); }
+
+  /* ---------- Fiche ---------- */
+  .fiche {
+    border-left: 1px solid var(--trait);
+    padding: 24px 20px;
+    overflow-y: auto;
+    min-height: 0;
+  }
+  .fiche summary {
+    font: 700 15px/1.2 var(--titre);
+    letter-spacing: .1em; text-transform: uppercase;
+    color: var(--discret);
+    cursor: pointer;
+    list-style: none;
+    display: flex; justify-content: space-between; align-items: baseline;
+  }
+  .fiche summary::-webkit-details-marker { display: none; }
+  .fiche summary small { font: 600 12.5px var(--texte); letter-spacing: 0; text-transform: none; }
+  .jauge { height: 4px; background: var(--trait); border-radius: 4px; margin: 10px 0 6px; overflow: hidden; }
+  .jauge i { display: block; height: 100%; background: var(--plot); transform: scaleX(0); transform-origin: left; transition: transform .3s; }
+  .fiche dl { margin: 12px 0 0; }
+  .fiche .ligne { padding: 9px 0; border-bottom: 1px solid var(--trait); display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; }
+  .fiche dt { font-size: 12.5px; color: var(--discret); grid-column: 1; }
+  .fiche dd { margin: 0; grid-column: 1; font-weight: 600; font-size: 15px; }
+  .fiche dd.vide { color: var(--discret); font-weight: 400; }
+  .fiche .modif {
+    grid-column: 2; grid-row: 1 / span 2; align-self: center;
+    background: none; border: 0; padding: 6px 4px;
+    color: var(--club); font-size: 13.5px; font-weight: 600; text-decoration: underline; text-underline-offset: 3px;
+  }
+  .fiche .modif:disabled { visibility: hidden; }
+  .fiche .bas { margin-top: 14px; font-size: 13px; color: var(--discret); }
+  .fiche .oublier {
+    margin-top: 10px; background: none; border: 1.5px solid var(--trait); border-radius: 10px;
+    padding: 8px 12px; font-size: 14px; width: 100%;
+  }
+  .fiche .oublier:hover { border-color: var(--plot); color: var(--plot); }
+  .fiche .oublier[hidden] { display: none; }
+
+  @media (max-width: 880px) {
+    main { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+    .fiche { order: -1; border-left: 0; border-bottom: 1px solid var(--trait); padding: 12px 16px; max-height: 45vh; }
+    .fil { padding: 16px 16px 10px; }
+    .saisie { padding: 10px 16px 14px; }
+    .entete { padding: 10px 16px; }
+    .entete p { display: none; }
+    .msg { max-width: 94%; }
+    .seance { grid-template-columns: 66px minmax(0, 1fr); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+</style>
+</head>
+<body>
+
+<header class="entete">
+  <div class="blason" aria-hidden="true"><span id="sigle">AS</span></div>
+  <div>
+    <h1 id="nomClub">Club</h1>
+    <p>Le coach qui te trouve tes séances de la semaine</p>
+  </div>
+  <label class="qui">
+    <span class="sr">Changer de personne</span>
+    <select id="selecteur"></select>
+  </label>
+</header>
+
+<main>
+  <section class="chat" aria-label="Conversation avec le coach">
+    <div class="fil" id="fil" role="log" aria-live="polite"></div>
+    <form class="saisie" id="formulaire" autocomplete="off">
+      <div class="choix" id="choix" role="group" aria-label="Réponses rapides"></div>
+      <div class="barre">
+        <label class="sr" for="champ">Ton message</label>
+        <input id="champ" type="text" maxlength="200" placeholder="Écris ta réponse…" enterkeyhint="send">
+        <button type="submit">Envoyer</button>
+      </div>
+    </form>
+  </section>
+
+  <aside class="fiche" aria-label="Ta fiche">
+    <details id="ficheBloc" open>
+      <summary>Ta fiche <small id="avancement"></small></summary>
+      <div class="jauge" aria-hidden="true"><i id="jauge"></i></div>
+      <dl id="ficheListe"></dl>
+      <p class="bas">Ta fiche reste dans ce navigateur, sur cet appareil. Rien n'est envoyé ailleurs.</p>
+      <button type="button" class="oublier" id="oublier" hidden>Effacer cette fiche</button>
+    </details>
+  </aside>
+</main>
+
+<script>
+/* =====================================================================
+   À ADAPTER À VOTRE CLUB
+   Le nom, puis le planning : une ligne par séance.
+   Le planning ci-dessous est un EXEMPLE, à remplacer par le vôtre.
+
+   jour      : lun mar mer jeu ven sam dim
+   cadre     : 'int' (salle, piscine) ou 'ext' (dehors)
+   intensite : 1 douce, 2 modérée, 3 soutenue
+   niveaux   : deb, inter, conf
+   objectifs : forme, poids, tonus, perf, social, detente
+   format    : 'equipe' (jeu collectif) ou 'perso' (chacun à son rythme)
+   eviter    : gênes pour lesquelles la séance est déconseillée
+   doux      : gênes pour lesquelles la séance est au contraire adaptée
+               (genou, dos, epaule, coeur)
+   ===================================================================== */
+const CLUB = { nom: "AS Les Tilleuls", sigle: "AST", contact: "le bureau du club" };
+
+const TOUS = ['deb', 'inter', 'conf'];
+const SEANCES = [
+  { id: 'renfo',    nom: "Renforcement musculaire",  sport: 'renfo',    jour: 'lun', h: '19:00', duree: 60,  lieu: "Gymnase, salle 2",   cadre: 'int', intensite: 2, niveaux: TOUS,              objectifs: ['tonus', 'poids', 'forme'],    format: 'perso',  ageMin: 16, ageMax: 99, eviter: [],                 doux: [] },
+  { id: 'yoga',     nom: "Yoga",                     sport: 'yoga',     jour: 'lun', h: '18:00', duree: 60,  lieu: "Salle polyvalente",  cadre: 'int', intensite: 1, niveaux: TOUS,              objectifs: ['detente', 'forme'],           format: 'perso',  ageMin: 16, ageMax: 99, eviter: [],                 doux: ['dos', 'coeur'] },
+  { id: 'nat-perf', nom: "Natation perfectionnement", sport: 'natation', jour: 'lun', h: '12:15', duree: 45,  lieu: "Piscine municipale", cadre: 'int', intensite: 2, niveaux: ['inter', 'conf'], objectifs: ['perf', 'forme', 'tonus'],     format: 'perso',  ageMin: 16, ageMax: 99, eviter: ['epaule'],         doux: ['genou', 'dos'] },
+  { id: 'pilates',  nom: "Pilates",                  sport: 'pilates',  jour: 'mar', h: '12:15', duree: 45,  lieu: "Salle polyvalente",  cadre: 'int', intensite: 1, niveaux: TOUS,              objectifs: ['tonus', 'detente', 'forme'],  format: 'perso',  ageMin: 16, ageMax: 99, eviter: [],                 doux: ['dos', 'genou'] },
+  { id: 'footing',  nom: "Footing découverte",       sport: 'course',   jour: 'mar', h: '18:30', duree: 60,  lieu: "Stade, départ piste", cadre: 'ext', intensite: 1, niveaux: ['deb', 'inter'],  objectifs: ['forme', 'poids', 'social'],   format: 'perso',  ageMin: 16, ageMax: 99, eviter: ['genou'],          doux: [] },
+  { id: 'volley',   nom: "Volley loisir mixte",      sport: 'volley',   jour: 'mar', h: '20:00', duree: 90,  lieu: "Gymnase",            cadre: 'int', intensite: 2, niveaux: TOUS,              objectifs: ['social', 'forme'],            format: 'equipe', ageMin: 16, ageMax: 99, eviter: ['epaule', 'genou'], doux: [] },
+  { id: 'multi',    nom: "Multisports enfants",      sport: 'multi',    jour: 'mer', h: '14:00', duree: 75,  lieu: "Gymnase",            cadre: 'int', intensite: 2, niveaux: TOUS,              objectifs: ['forme', 'social', 'tonus', 'detente'], format: 'equipe', ageMin: 6,  ageMax: 10, eviter: [],        doux: [] },
+  { id: 'athle-j',  nom: "Athlétisme jeunes",        sport: 'course',   jour: 'mer', h: '16:00', duree: 90,  lieu: "Stade",              cadre: 'ext', intensite: 2, niveaux: TOUS,              objectifs: ['perf', 'forme', 'tonus', 'poids'], format: 'perso', ageMin: 11, ageMax: 15, eviter: ['genou'],     doux: [] },
+  { id: 'circuit',  nom: "Circuit training",         sport: 'renfo',    jour: 'mer', h: '19:30', duree: 45,  lieu: "Gymnase, salle 2",   cadre: 'int', intensite: 3, niveaux: ['inter', 'conf'], objectifs: ['poids', 'perf', 'tonus'],     format: 'perso',  ageMin: 16, ageMax: 99, eviter: ['genou', 'dos', 'coeur'], doux: [] },
+  { id: 'gym-dou',  nom: "Gym douce",                sport: 'gym',      jour: 'jeu', h: '10:00', duree: 60,  lieu: "Salle polyvalente",  cadre: 'int', intensite: 1, niveaux: TOUS,              objectifs: ['forme', 'social', 'detente'], format: 'perso',  ageMin: 50, ageMax: 99, eviter: [],                 doux: ['genou', 'dos', 'epaule', 'coeur'] },
+  { id: 'fractio',  nom: "Fractionné sur piste",     sport: 'course',   jour: 'jeu', h: '19:00', duree: 75,  lieu: "Stade",              cadre: 'ext', intensite: 3, niveaux: ['inter', 'conf'], objectifs: ['perf', 'poids'],              format: 'perso',  ageMin: 16, ageMax: 99, eviter: ['genou', 'coeur'], doux: [] },
+  { id: 'bad',      nom: "Badminton loisir",         sport: 'badminton', jour: 'jeu', h: '20:00', duree: 90, lieu: "Gymnase",            cadre: 'int', intensite: 2, niveaux: TOUS,              objectifs: ['social', 'forme', 'poids'],   format: 'equipe', ageMin: 16, ageMax: 99, eviter: ['epaule', 'genou'], doux: [] },
+  { id: 'aquagym',  nom: "Aquagym",                  sport: 'natation', jour: 'ven', h: '12:15', duree: 45,  lieu: "Piscine municipale", cadre: 'int', intensite: 1, niveaux: TOUS,              objectifs: ['forme', 'poids', 'tonus'],    format: 'perso',  ageMin: 16, ageMax: 99, eviter: [],                 doux: ['genou', 'dos'] },
+  { id: 'stretch',  nom: "Étirements et mobilité",   sport: 'stretch',  jour: 'ven', h: '18:30', duree: 45,  lieu: "Salle polyvalente",  cadre: 'int', intensite: 1, niveaux: TOUS,              objectifs: ['detente', 'forme'],           format: 'perso',  ageMin: 16, ageMax: 99, eviter: [],                 doux: ['dos', 'epaule'] },
+  { id: 'foot5',    nom: "Foot à 5 loisir",          sport: 'foot',     jour: 'ven', h: '20:00', duree: 60,  lieu: "Terrain synthétique", cadre: 'ext', intensite: 3, niveaux: ['inter', 'conf'], objectifs: ['social', 'poids', 'perf'],    format: 'equipe', ageMin: 16, ageMax: 99, eviter: ['genou', 'coeur'], doux: [] },
+  { id: 'marche',   nom: "Marche nordique",          sport: 'marche',   jour: 'sam', h: '09:30', duree: 90,  lieu: "Parking du stade",   cadre: 'ext', intensite: 1, niveaux: TOUS,              objectifs: ['forme', 'social', 'poids'],   format: 'perso',  ageMin: 16, ageMax: 99, eviter: [],                 doux: ['dos', 'coeur'] },
+  { id: 'nat-j',    nom: "Natation jeunes",          sport: 'natation', jour: 'sam', h: '10:00', duree: 45,  lieu: "Piscine municipale", cadre: 'int', intensite: 2, niveaux: TOUS,              objectifs: ['forme', 'perf', 'tonus', 'detente'], format: 'perso', ageMin: 6, ageMax: 15, eviter: [],          doux: ['genou', 'dos'] },
+  { id: 'prepa',    nom: "Préparation physique compétition", sport: 'renfo', jour: 'sam', h: '10:00', duree: 75, lieu: "Gymnase, salle 2", cadre: 'int', intensite: 3, niveaux: ['conf'],        objectifs: ['perf', 'tonus'],              format: 'perso',  ageMin: 16, ageMax: 99, eviter: ['genou', 'dos', 'epaule', 'coeur'], doux: [] },
+  { id: 'nat-deb',  nom: "Natation adultes, aisance", sport: 'natation', jour: 'sam', h: '11:00', duree: 45, lieu: "Piscine municipale", cadre: 'int', intensite: 1, niveaux: ['deb'],            objectifs: ['forme', 'detente'],           format: 'perso',  ageMin: 16, ageMax: 99, eviter: [],                 doux: ['genou', 'dos'] },
+  { id: 'bad-j',    nom: "Badminton jeunes",         sport: 'badminton', jour: 'sam', h: '14:00', duree: 90, lieu: "Gymnase",            cadre: 'int', intensite: 2, niveaux: TOUS,              objectifs: ['social', 'forme', 'perf', 'poids'], format: 'equipe', ageMin: 11, ageMax: 17, eviter: ['epaule'],   doux: [] },
+  { id: 'velo',     nom: "Sortie vélo de route",     sport: 'velo',     jour: 'dim', h: '09:00', duree: 120, lieu: "Parking du stade",   cadre: 'ext', intensite: 2, niveaux: ['inter', 'conf'], objectifs: ['perf', 'poids', 'social'],    format: 'perso',  ageMin: 16, ageMax: 99, eviter: ['dos'],            doux: ['genou'] },
+  { id: 'longue',   nom: "Sortie longue course à pied", sport: 'course', jour: 'dim', h: '09:30', duree: 90, lieu: "Stade, départ piste", cadre: 'ext', intensite: 2, niveaux: ['inter', 'conf'], objectifs: ['perf', 'forme', 'social'],   format: 'perso',  ageMin: 16, ageMax: 99, eviter: ['genou'],          doux: [] }
+];
+/* ======================= fin de la partie à adapter ======================= */
+
+const JOURS = [['lun', 'Lundi'], ['mar', 'Mardi'], ['mer', 'Mercredi'], ['jeu', 'Jeudi'], ['ven', 'Vendredi'], ['sam', 'Samedi'], ['dim', 'Dimanche']];
+const ORDRE_JOUR = JOURS.map(j => j[0]);
+const NOM_JOUR = Object.fromEntries(JOURS);
+const MOMENTS = { matin: "Matin", midi: "Midi", aprem: "Après-midi", soir: "Soir" };
+const OBJECTIFS = { forme: "Me remettre en forme", poids: "Perdre du poids", tonus: "Me muscler", perf: "Progresser, performer", social: "Voir du monde, m'amuser", detente: "Me détendre, m'assouplir" };
+const OBJ_COURT = { forme: "remise en forme", poids: "perte de poids", tonus: "renforcement", perf: "progression", social: "convivialité", detente: "détente" };
+const NIVEAUX = { deb: "Débutant ou en reprise", inter: "Régulier", conf: "Confirmé" };
+const GENES = { genou: "Genoux, chevilles", dos: "Dos", epaule: "Épaules, bras", coeur: "Souffle, cœur" };
+const GENE_PHRASE = { genou: "tes genoux", dos: "ton dos", epaule: "tes épaules", coeur: "ton souffle" };
+const FORMATS = { equipe: "Jeu collectif", perso: "À mon rythme", indif: "Peu importe" };
+const CADRES = { int: "En salle", ext: "Dehors", indif: "Peu importe" };
+const EFFORT = { 1: "Douce", 2: "Modérée", 3: "Soutenue" };
+
+const sansAccent = t => String(t).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[’`]/g, "'").trim();
+const momentDe = h => { const n = parseInt(h, 10); return n < 12 ? 'matin' : n < 14 ? 'midi' : n < 17 ? 'aprem' : 'soir'; };
+const heure = h => h.replace(':', ' h ').replace(' h 00', ' h');
+const liste = a => a.length <= 1 ? a.join('') : a.slice(0, -1).join(', ') + ' et ' + a[a.length - 1];
+
+function trouver(texte, table) {
+  const t = sansAccent(texte), out = [];
+  for (const [valeur, motifs] of table) if (motifs.test(t) && !out.includes(valeur)) out.push(valeur);
+  return out;
+}
+
+/* ---------- Les questions ---------- */
+const ETAPES = [
+  {
+    cle: 'prenom', titre: "Prénom",
+    question: () => "Pour commencer, c'est quoi ton prénom ?",
+    lire(texte) {
+      let t = texte.trim().replace(/^(bonjour|bonsoir|salut|coucou|hello|hey)[\s,!.]*/i, '')
+        .replace(/^(je m'appelle|je m’appelle|moi c'est|moi c’est|c'est|c’est|je suis)\s+/i, '');
+      t = (t.match(/[\p{L}][\p{L}'’-]*/gu) || []).slice(0, 2).join(' ').slice(0, 30);
+      if (!t) return { erreur: "Je n'ai pas saisi ton prénom. Tu peux juste l'écrire, par exemple « Camille »." };
+      return { valeur: t.charAt(0).toUpperCase() + t.slice(1) };
+    },
+    afficher: v => v
+  },
+  {
+    cle: 'age', titre: "Âge",
+    question: p => `Enchanté ${p.prenom} ! Tu as quel âge ? Ça me permet de t'orienter vers les bons groupes.`,
+    lire(texte) {
+      const m = sansAccent(texte).match(/\d{1,3}/);
+      if (!m) return { erreur: "Donne-moi ton âge en chiffres, par exemple « 34 »." };
+      const n = +m[0];
+      if (n < 6) return { erreur: "Nos séances démarrent à 6 ans. Si l'âge est bien inférieur, il faudra patienter un peu ; sinon, redonne-le-moi." };
+      if (n > 99) return { erreur: "Ça me paraît beaucoup. Tu peux me redonner ton âge ?" };
+      return { valeur: n };
+    },
+    afficher: v => v + " ans"
+  },
+  {
+    cle: 'objectifs', titre: "Objectifs", multi: true,
+    question: () => "Qu'est-ce que tu viens chercher au club ? Tu peux en choisir plusieurs.",
+    options: Object.entries(OBJECTIFS).map(([v, label]) => ({ v, label })),
+    table: [
+      ['forme', /forme|sante|reprise|reprendre|bouger|entretien|endurance|cardio/],
+      ['poids', /poids|maigrir|mincir|kilo|perdre|affiner|secher/],
+      ['tonus', /muscl|tonus|tonif|renfo|gainage|force/],
+      ['perf', /perf|progress|compet|chrono|ameliorer|niveau|course|marathon|10 ?km/],
+      ['social', /monde|rencontr|amus|convivial|copain|ami|equipe|ambiance|social|fun/],
+      ['detente', /detend|souple|assoupl|stress|zen|relax|calme|mobilite|etire/]
+    ],
+    aide: "Dis-moi par exemple « perdre du poids et voir du monde », ou touche les boutons.",
+    afficher: v => liste(v.map(o => OBJ_COURT[o]))
+  },
+  {
+    cle: 'niveau', titre: "Niveau",
+    question: () => "Tu te situes où aujourd'hui, côté sport ?",
+    options: Object.entries(NIVEAUX).map(([v, label]) => ({ v, label })),
+    table: [
+      ['deb', /debut|reprise|reprend|jamais|novice|zero|longtemps|pas sportif|nul/],
+      ['conf', /confirm|expert|avance|compet|tres sportif|bon niveau|athlete/],
+      ['inter', /regulier|inter|moyen|parfois|de temps|un peu|correct/]
+    ],
+    aide: "Débutant, régulier ou confirmé ?",
+    afficher: v => NIVEAUX[v]
+  },
+  {
+    cle: 'jours', titre: "Jours libres", multi: true,
+    question: () => "Quels jours peux-tu venir ?",
+    options: [...JOURS.map(([v, label]) => ({ v, label })), { v: '*', label: "Tous les jours", seul: true }],
+    lireTexte(texte) {
+      const t = sansAccent(texte);
+      if (/tous|toute la semaine|n'importe|peu importe|quand/.test(t) && !/sauf/.test(t)) return [...ORDRE_JOUR];
+      let out = trouver(t, [['lun', /lun/], ['mar', /mar(di|\b)/], ['mer', /mer/], ['jeu', /jeu/], ['ven', /ven/], ['sam', /sam/], ['dim', /dim/]]);
+      if (/week-?end|\bwe\b/.test(t)) out.push('sam', 'dim');
+      if (/semaine/.test(t) && !/toute/.test(t)) out.push('lun', 'mar', 'mer', 'jeu', 'ven');
+      out = ORDRE_JOUR.filter(j => out.includes(j));
+      if (/sauf|pas le|excepte/.test(t) && out.length) out = ORDRE_JOUR.filter(j => !out.includes(j));
+      return out;
+    },
+    aide: "Par exemple « mardi et jeudi », « le week-end » ou « tous sauf mercredi ».",
+    afficher: v => v.length === 7 ? "Tous les jours" : liste(v.map(j => NOM_JOUR[j].toLowerCase()))
+  },
+  {
+    cle: 'moments', titre: "Créneaux", multi: true,
+    question: () => "Plutôt à quel moment de la journée ?",
+    options: [...Object.entries(MOMENTS).map(([v, label]) => ({ v, label })), { v: '*', label: "Peu importe", seul: true }],
+    lireTexte(texte) {
+      const t = sansAccent(texte);
+      if (/peu importe|n'importe|tout|egal|quand/.test(t)) return Object.keys(MOMENTS);
+      return trouver(t, [['matin', /matin|tot\b/], ['midi', /midi|dejeuner|pause/], ['aprem', /apres-?midi|aprem|gouter/], ['soir', /soir|apres le (travail|boulot)|tard/]]);
+    },
+    aide: "Matin, midi, après-midi, soir, ou « peu importe ».",
+    afficher: v => v.length === 4 ? "Peu importe" : liste(v.map(m => MOMENTS[m].toLowerCase()))
+  },
+  {
+    cle: 'frequence', titre: "Rythme",
+    question: () => "Combien de séances par semaine tu te vois tenir, honnêtement ?",
+    options: [{ v: 1, label: "1 séance" }, { v: 2, label: "2 séances" }, { v: 3, label: "3 séances" }, { v: 4, label: "4 séances" }],
+    lireTexte(texte) {
+      const t = sansAccent(texte);
+      const m = t.match(/\d/);
+      if (m) return [Math.min(4, Math.max(1, +m[0]))];
+      return trouver(t, [[1, /\bune?\b/], [2, /deux/], [3, /trois/], [4, /quatre/]]).slice(0, 1);
+    },
+    aide: "Un chiffre entre 1 et 4 me suffit.",
+    afficher: v => v + (v > 1 ? " séances par semaine" : " séance par semaine")
+  },
+  {
+    cle: 'genes', titre: "À ménager", multi: true,
+    question: () => "Y a-t-il une zone à ménager ? Je m'en sers pour écarter les séances qui tirent dessus.",
+    options: [...Object.entries(GENES).map(([v, label]) => ({ v, label })), { v: '-', label: "Rien de particulier", seul: true }],
+    lireTexte(texte) {
+      const t = sansAccent(texte);
+      const out = trouver(t, [
+        ['genou', /genou|cheville|hanche|menisque|ligament|tendinite d'achille/],
+        ['dos', /dos|lombai|sciati|hernie|cervical/],
+        ['epaule', /epaule|coude|poignet|bras/],
+        ['coeur', /coeur|cardia|souffle|asthm|tension|essouffl/]
+      ]);
+      if (out.length) return out;
+      if (/aucun|rien|non|ras|nickel|tout va|pas de/.test(t)) return ['-'];
+      return [];
+    },
+    aide: "Par exemple « le dos », « un genou fragile » ou « rien ».",
+    afficher: v => v.length ? liste(v.map(g => GENES[g].toLowerCase())) : "Rien de particulier"
+  },
+  {
+    cle: 'format', titre: "Ambiance",
+    question: () => "Tu préfères jouer en équipe, ou avancer à ton rythme dans un groupe encadré ?",
+    options: Object.entries(FORMATS).map(([v, label]) => ({ v, label })),
+    table: [
+      ['indif', /peu importe|egal|les deux|indiff|n'importe/],
+      ['equipe', /equipe|collectif|jeu|match|ballon/],
+      ['perso', /rythme|solo|seul|individuel|perso|tranquille/]
+    ],
+    aide: "Jeu collectif, à ton rythme, ou peu importe ?",
+    afficher: v => FORMATS[v]
+  },
+  {
+    cle: 'cadre', titre: "Lieu",
+    question: () => "Dernière question : plutôt en salle ou dehors ?",
+    options: Object.entries(CADRES).map(([v, label]) => ({ v, label })),
+    table: [
+      ['indif', /peu importe|egal|les deux|indiff|n'importe/],
+      ['ext', /dehors|exterieur|plein air|nature|air/],
+      ['int', /salle|interieur|dedans|chaud|abri|piscine|gymnase/]
+    ],
+    aide: "En salle, dehors, ou peu importe ?",
+    afficher: v => CADRES[v]
+  }
+];
+
+/* ---------- État et stockage ---------- */
+const CLE_STOCKAGE = 'coach-club-fiches-v1';
+let fiches = {};
+try { fiches = JSON.parse(localStorage.getItem(CLE_STOCKAGE) || '{}') || {}; } catch (e) { fiches = {}; }
+function enregistrer() { try { localStorage.setItem(CLE_STOCKAGE, JSON.stringify(fiches)); } catch (e) { /* stockage indisponible : on continue sans */ } }
+const ficheComplete = p => ETAPES.every(e => p[e.cle] !== undefined);
+
+const etat = { mode: 'accueil', etape: 0, profil: {}, selection: new Set(), vues: new Set(), reglage: 0 };
+
+const $ = id => document.getElementById(id);
+const fil = $('fil'), choix = $('choix'), champ = $('champ');
+const calme = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function el(balise, attrs, ...enfants) {
+  const n = document.createElement(balise);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (k === 'class') n.className = v; else if (k === 'text') n.textContent = v; else n.setAttribute(k, v);
+  }
+  for (const e of enfants.flat()) if (e != null) n.append(e);
+  return n;
+}
+const descendre = () => { fil.scrollTop = fil.scrollHeight; };
+const pause = ms => new Promise(r => setTimeout(r, ms));
+
+/* ---------- Affichage des messages ---------- */
+let file = Promise.resolve();
+function coach(contenu, large) {
+  file = file.then(async () => {
+    const bulle = el('div', { class: 'msg coach' + (large ? ' large' : '') });
+    if (!calme) {
+      bulle.append(el('span', { class: 'ecrit', 'aria-hidden': 'true' }, el('i'), el('i'), el('i')));
+      fil.append(bulle); descendre();
+      await pause(large ? 650 : 380);
+      bulle.textContent = '';
+    } else fil.append(bulle);
+    if (typeof contenu === 'string') bulle.append(el('p', { text: contenu }));
+    else bulle.append(...[].concat(contenu));
+    descendre();
+  });
+}
+const ensuite = fn => { file = file.then(fn); };
+function moi(texte) { fil.append(el('div', { class: 'msg moi', text: texte })); descendre(); }
+
+/* ---------- Réponses rapides ---------- */
+function puces(items) {
+  choix.textContent = '';
+  for (const it of items) {
+    const b = el('button', { type: 'button', class: 'puce', text: it.label });
+    b.addEventListener('click', it.action);
+    choix.append(b);
+  }
+}
+function pucesEtape() {
+  const e = ETAPES[etat.etape];
+  choix.textContent = '';
+  if (!e.options) return;
+  if (!e.multi) {
+    puces(e.options.map(o => ({ label: o.label, action: () => { moi(o.label); valider(o.v); } })));
+    return;
+  }
+  etat.selection = new Set();
+  const ok = el('button', { type: 'button', class: 'puce valider', text: "Valider", disabled: '' });
+  const boutons = e.options.map(o => {
+    const b = el('button', { type: 'button', class: 'puce', 'aria-pressed': 'false', text: o.label });
+    b.addEventListener('click', () => {
+      const s = etat.selection;
+      if (s.has(o.v)) s.delete(o.v);
+      else {
+        if (o.seul) s.clear(); else e.options.filter(x => x.seul).forEach(x => s.delete(x.v));
+        s.add(o.v);
+      }
+      boutons.forEach((x, i) => x.setAttribute('aria-pressed', String(s.has(e.options[i].v))));
+      ok.disabled = s.size === 0;
+    });
+    return b;
+  });
+  ok.addEventListener('click', () => {
+    const pris = e.options.filter(o => etat.selection.has(o.v));
+    moi(pris.map(o => o.label).join(', '));
+    valider(developper(e, pris.map(o => o.v)));
+  });
+  choix.append(...boutons, ok);
+}
+function developper(e, valeurs) {
+  if (valeurs.includes('*')) return e.options.filter(o => !o.seul).map(o => o.v);
+  if (valeurs.includes('-')) return [];
+  return valeurs;
+}
+function pucesLibres() {
+  puces([
+    { label: "D'autres idées", action: () => envoyer("D'autres idées") },
+    { label: "Plus doux", action: () => envoyer("Plus doux") },
+    { label: "Plus intense", action: () => envoyer("Plus intense") },
+    { label: "Tout le planning", action: () => envoyer("Tout le planning") },
+    { label: "Nouvelle personne", action: () => envoyer("Nouvelle personne") }
+  ]);
+}
+
+/* ---------- Fiche latérale ---------- */
+function majFiche() {
+  const p = etat.profil, dl = $('ficheListe');
+  dl.textContent = '';
+  let faits = 0;
+  ETAPES.forEach((e, i) => {
+    const rempli = p[e.cle] !== undefined;
+    if (rempli) faits++;
+    const b = el('button', { type: 'button', class: 'modif', text: "Modifier", 'aria-label': "Modifier : " + e.titre });
+    b.disabled = !(rempli && etat.mode === 'libre');
+    b.addEventListener('click', () => { moi("Je veux modifier : " + e.titre.toLowerCase()); corriger(i); });
+    dl.append(el('div', { class: 'ligne' },
+      el('dt', { text: e.titre }),
+      el('dd', { class: rempli ? '' : 'vide', text: rempli ? e.afficher(p[e.cle]) : "à venir" }),
+      b));
+  });
+  $('avancement').textContent = faits === ETAPES.length ? "complète" : faits + " sur " + ETAPES.length;
+  $('jauge').style.transform = `scaleX(${faits / ETAPES.length})`;
+  $('oublier').hidden = !(p.prenom && fiches[sansAccent(p.prenom)]);
+}
+function majSelecteur() {
+  const s = $('selecteur'); s.textContent = '';
+  const noms = Object.values(fiches).map(f => f.prenom);
+  const courant = etat.profil.prenom ? sansAccent(etat.profil.prenom) : '';
+  s.append(el('option', { value: '', text: noms.length ? "Nouvelle personne" : "Première visite" }));
+  for (const n of noms) {
+    const o = el('option', { value: sansAccent(n), text: n });
+    if (sansAccent(n) === courant) o.selected = true;
+    s.append(o);
+  }
+  s.parentElement.style.display = noms.length ? '' : 'none';
+}
+
+/* ---------- Déroulé ---------- */
+function poser(i) {
+  etat.etape = i;
+  coach(ETAPES[i].question(etat.profil));
+  ensuite(() => { pucesEtape(); majFiche(); });
+}
+function corriger(i) {
+  etat.mode = 'correction';
+  choix.textContent = '';
+  poser(i);
+}
+function valider(valeur) {
+  const e = ETAPES[etat.etape], p = etat.profil;
+  p[e.cle] = valeur;
+  choix.textContent = '';
+  majFiche();
+
+  if (e.cle === 'age' && valeur < 18) coach("Noté. Pour les moins de 18 ans, l'inscription se fait avec un parent ou un responsable.");
+  if (e.cle === 'frequence' && p.jours && valeur > p.jours.length) {
+    p.frequence = p.jours.length;
+    coach(`Tu n'es libre que ${p.jours.length} jour${p.jours.length > 1 ? 's' : ''} : je pars donc sur ${p.jours.length} séance${p.jours.length > 1 ? 's' : ''}, une par jour au maximum.`);
+  }
+  if (e.cle === 'jours' && p.frequence && p.frequence > valeur.length) p.frequence = valeur.length;
+
+  if (etat.mode === 'correction' || etat.etape === ETAPES.length - 1) {
+    etat.vues.clear(); etat.reglage = 0;
+    recommander(etat.mode === 'correction' ? "C'est corrigé. Voici ce que ça donne :" : null);
+  } else poser(etat.etape + 1);
+}
+
+function lireReponse(texte) {
+  const e = ETAPES[etat.etape];
+  if (e.lire) return e.lire(texte);
+  let v = e.lireTexte ? e.lireTexte(texte) : trouver(texte, e.table);
+  if (!v.length) {
+    // dernier recours : le libellé exact d'un bouton
+    const t = sansAccent(texte);
+    v = e.options.filter(o => sansAccent(o.label) === t).map(o => o.v);
+  }
+  if (!v.length) return { erreur: "Je n'ai pas compris. " + e.aide };
+  return { valeur: e.multi ? developper(e, v) : v[0] };
+}
+
+/* ---------- Moteur de recommandation ---------- */
+function possible(s, p) {
+  return p.age >= s.ageMin && p.age <= s.ageMax && s.niveaux.includes(p.niveau) && !s.eviter.some(g => p.genes.includes(g));
+}
+function effortVise(p) {
+  let c = { deb: 1.3, inter: 2, conf: 2.6 }[p.niveau];
+  if (p.objectifs.includes('perf')) c += .3;
+  if (p.objectifs.includes('detente')) c -= .3;
+  if (p.age >= 65) c -= .3;
+  if (p.genes.includes('coeur')) c -= .4;
+  return Math.min(3, Math.max(1, c + etat.reglage));
+}
+function note(s, p) {
+  let n = 0;
+  n += 3 * s.objectifs.filter(o => p.objectifs.includes(o)).length;
+  n += 2 * s.doux.filter(g => p.genes.includes(g)).length;
+  if (p.format !== 'indif' && s.format === p.format) n += 1.5;
+  if (p.cadre !== 'indif' && s.cadre === p.cadre) n += 1.5;
+  n -= 1.8 * Math.abs(s.intensite - effortVise(p));
+  if (s.ageMax < 99 || s.ageMin >= 50) n += 1; // groupe pensé pour cette tranche d'âge
+  return n;
+}
+const voisins = (a, b) => { const d = Math.abs(ORDRE_JOUR.indexOf(a) - ORDRE_JOUR.indexOf(b)); return d === 1 || d === 6; };
+
+function planifier(p, exclues) {
+  const viviers = SEANCES.filter(s => possible(s, p) && !exclues.has(s.id)).map(s => ({ s, n: note(s, p) }));
+  const plan = [];
+  const piocher = strict => {
+    while (plan.length < p.frequence) {
+      let meilleur = null;
+      for (const c of viviers) {
+        if (plan.some(x => x.s === c.s || x.s.jour === c.s.jour)) continue;
+        if (!p.jours.includes(c.s.jour)) continue;
+        const bonMoment = p.moments.includes(momentDe(c.s.h));
+        if (strict && !bonMoment) continue;
+        if (c.s.intensite === 3 && plan.some(x => x.s.intensite === 3 && voisins(x.s.jour, c.s.jour))) continue;
+        const valeur = c.n - 2 * plan.filter(x => x.s.sport === c.s.sport).length;
+        if (!meilleur || valeur > meilleur.valeur) meilleur = { s: c.s, valeur, decale: !bonMoment };
+      }
+      if (!meilleur) break;
+      plan.push(meilleur);
+    }
+  };
+  piocher(true);
+  piocher(false);
+  plan.sort((a, b) => ORDRE_JOUR.indexOf(a.s.jour) - ORDRE_JOUR.indexOf(b.s.jour));
+
+  let ailleurs = [];
+  if (plan.length < p.frequence) {
+    ailleurs = viviers.filter(c => !p.jours.includes(c.s.jour) && !plan.some(x => x.s === c.s))
+      .sort((a, b) => b.n - a.n).slice(0, 2).map(c => ({ s: c.s, autreJour: true }));
+  }
+  return { plan, ailleurs };
+}
+
+function raisons(s, p) {
+  const r = [];
+  const objs = s.objectifs.filter(o => p.objectifs.includes(o));
+  if (objs.length) r.push("sert ton objectif " + liste(objs.map(o => OBJ_COURT[o])));
+  const menage = s.doux.filter(g => p.genes.includes(g));
+  if (menage.length) r.push("ménage " + liste(menage.map(g => GENE_PHRASE[g])));
+  if (p.niveau === 'deb') r.push("accessible quand on débute");
+  else if (p.niveau === 'conf' && s.intensite === 3) r.push("assez relevée pour ton niveau");
+  if (p.format !== 'indif' && s.format === p.format) r.push(p.format === 'equipe' ? "en équipe, comme tu aimes" : "chacun avance à son rythme");
+  if (p.cadre !== 'indif' && s.cadre === p.cadre) r.push(p.cadre === 'ext' ? "en plein air" : "au chaud en salle");
+  if (!r.length) r.push("compatible avec ton âge, ton niveau et tes disponibilités");
+  return r.slice(0, 3).join(', ') + '.';
+}
+
+function carte(item, p) {
+  const s = item.s;
+  const pips = el('span', { class: 'pips', 'aria-hidden': 'true' }, [1, 2, 3].map(i => el('i', { class: i <= s.intensite ? 'on' : '' })));
+  const quoi = el('div', { class: 'quoi' },
+    el('h3', { text: s.nom }),
+    el('div', { class: 'infos' }, `${s.duree} min · ${s.lieu} · `, el('span', { class: 'effort' }, pips, "Intensité " + EFFORT[s.intensite].toLowerCase())),
+    p ? el('div', { class: 'pourquoi', text: raisons(s, p) }) : null,
+    item.decale ? el('span', { class: 'etiquette', text: "Hors de tes créneaux habituels" }) : null,
+    item.autreJour ? el('span', { class: 'etiquette', text: "Un jour où tu n'es pas libre" }) : null
+  );
+  return el('li', { class: 'seance' },
+    el('div', { class: 'quand' }, el('b', { text: NOM_JOUR[s.jour].slice(0, 3) }), el('span', { text: heure(s.h) })),
+    quoi);
+}
+
+function recommander(intro) {
+  const p = etat.profil;
+  etat.mode = 'libre';
+  fiches[sansAccent(p.prenom)] = { ...p };
+  enregistrer(); majSelecteur(); majFiche();
+
+  const { plan, ailleurs } = planifier(p, etat.vues);
+  const blocs = [];
+
+  if (!plan.length && !ailleurs.length) {
+    if (etat.vues.size) {
+      etat.vues.clear();
+      coach("J'ai fait le tour de ce qui te correspond. Je peux te remontrer la première sélection, ou tu peux élargir tes jours et tes créneaux.");
+    } else {
+      coach(`Je ne trouve aucune séance du planning qui colle à ta fiche, ${p.prenom}. Le plus souvent, ce sont les jours ou les créneaux qui bloquent : essaie de les élargir avec « Modifier » dans ta fiche. Sinon, ${CLUB.contact} saura te conseiller.`);
+    }
+    ensuite(pucesLibres);
+    return;
+  }
+
+  const n = plan.length;
+  blocs.push(el('p', { text: intro || (n ? `Voilà, ${p.prenom}. ${n === 1 ? "Voici la séance que je te conseille" : `Voici les ${n} séances que je te conseille`} pour ta semaine :` : `Rien ne colle sur tes jours libres, ${p.prenom}. Voici ce qui te conviendrait si tu peux te libérer :`) }));
+  if (n) blocs.push(el('ul', { class: 'seances' }, plan.map(x => carte(x, p))));
+  if (n && n < p.frequence) blocs.push(el('p', { class: 'note', text: `Tu visais ${p.frequence} séances, je n'en trouve que ${n} sur tes disponibilités.` + (ailleurs.length ? " En te libérant un autre jour, il y aurait aussi :" : " Élargis tes jours ou tes créneaux pour en voir d'autres.") }));
+  if (ailleurs.length) blocs.push(el('ul', { class: 'seances' }, ailleurs.map(x => carte(x, p))));
+
+  const conseils = [];
+  if (p.genes.includes('coeur')) conseils.push("Pour le souffle ou le cœur, demande l'avis de ton médecin avant de reprendre.");
+  else if (p.genes.length) conseils.push(`Préviens l'encadrant pour ${liste(p.genes.map(g => GENE_PHRASE[g]))} dès ta première séance : il adaptera les exercices.`);
+  if (p.niveau === 'deb' && p.frequence >= 3) conseils.push("En reprise, garde au moins un jour de repos entre deux séances les premières semaines.");
+  if (p.age >= 60 && p.niveau === 'deb' && !p.genes.includes('coeur')) conseils.push("Un petit contrôle chez le médecin avant de reprendre reste une bonne idée.");
+  for (const c of conseils) blocs.push(el('p', { class: 'note', text: c }));
+
+  [...plan, ...ailleurs].forEach(x => etat.vues.add(x.s.id));
+  coach(blocs, true);
+  ensuite(pucesLibres);
+}
+
+/* ---------- Conversation libre, une fois la fiche remplie ---------- */
+const CHAMPS = [
+  ['jours', /jour|dispo|semaine|week/], ['moments', /moment|horaire|heure|creneau|matin|soir|midi/],
+  ['objectifs', /objectif|but|envie/], ['niveau', /niveau/], ['frequence', /fois|frequence|rythme|nombre|combien/],
+  ['genes', /douleur|blessure|gene|sante|menager|genou|dos|epaule/], ['age', /\bage\b/], ['prenom', /prenom|nom/],
+  ['format', /collectif|equipe|ambiance|format/], ['cadre', /salle|dehors|interieur|exterieur|lieu|cadre/]
+];
+
+function repondreLibre(texte) {
+  const t = sansAccent(texte), p = etat.profil;
+
+  if (/nouvelle personne|nouveau profil|quelqu'un d'autre|autre personne|recommenc|repartir de zero|reset/.test(t)) return nouvellePersonne();
+
+  if (/chang|modifi|corrig|tromp|erreur/.test(t)) {
+    const c = trouver(t, CHAMPS)[0];
+    if (c) return corriger(ETAPES.findIndex(e => e.cle === c));
+    coach("Bien sûr. Dis-moi quoi, par exemple « changer mes jours » ou « modifier mon objectif », ou utilise « Modifier » dans ta fiche.");
+    return ensuite(pucesLibres);
+  }
+  if (/plus dou|moins intens|moins dur|trop dur|trop intens|plus facile|plus tranquille|plus cool|plus calme/.test(t)) {
+    if (etat.reglage <= -1.4) { coach("Je suis déjà au plus doux de ce que propose le club."); return ensuite(pucesLibres); }
+    etat.reglage -= .7; etat.vues.clear();
+    return recommander("Compris, on lève le pied. Version plus douce :");
+  }
+  if (/plus intens|plus dur|trop facile|trop dou|plus sportif|plus costaud|plus pousse/.test(t)) {
+    if (etat.reglage >= 1.4) { coach("Je suis déjà au plus soutenu de ce que ton niveau permet au club."); return ensuite(pucesLibres); }
+    etat.reglage += .7; etat.vues.clear();
+    return recommander("D'accord, on monte d'un cran. Version plus intense :");
+  }
+  if (/autre|alternative|different|encore|pas convaincu|bof|sinon/.test(t)) return recommander("Voici d'autres séances qui te correspondent :");
+
+  if (/planning|toutes les seances|tout voir|programme complet|liste/.test(t)) {
+    const parJour = ORDRE_JOUR.map(j => {
+      const s = SEANCES.filter(x => x.jour === j).sort((a, b) => a.h.localeCompare(b.h));
+      return el('li', {}, el('b', { text: NOM_JOUR[j] + " : " }), s.map(x => `${x.nom} (${heure(x.h)})`).join(', '));
+    });
+    coach([el('p', { text: "Le planning complet du club :" }), el('ul', { class: 'liste-simple' }, parJour)], true);
+    return ensuite(pucesLibres);
+  }
+
+  const jour = trouver(t, [['lun', /lundi/], ['mar', /mardi/], ['mer', /mercredi/], ['jeu', /jeudi/], ['ven', /vendredi/], ['sam', /samedi/], ['dim', /dimanche/]])[0];
+  if (jour) {
+    const s = SEANCES.filter(x => x.jour === jour && possible(x, p)).sort((a, b) => note(b, p) - note(a, p));
+    if (!s.length) coach(`Le ${NOM_JOUR[jour].toLowerCase()}, aucune séance ne correspond à ta fiche (âge, niveau, zones à ménager).`);
+    else coach([el('p', { text: `Le ${NOM_JOUR[jour].toLowerCase()}, voici ce qui te conviendrait, du plus adapté au moins adapté :` }), el('ul', { class: 'seances' }, s.map(x => carte({ s: x }, p)))], true);
+    return ensuite(pucesLibres);
+  }
+  if (/tarif|prix|cout|cotis|inscri|licence|certificat|adhesion|payer|essai/.test(t)) {
+    coach(`Je ne connais que le planning des séances. Pour les tarifs, l'inscription ou une séance d'essai, adresse-toi à ${CLUB.contact}.`);
+    return ensuite(pucesLibres);
+  }
+  if (/pourquoi|comment tu|sur quoi/.test(t)) {
+    coach("Je garde les séances ouvertes à ton âge et à ton niveau, j'écarte celles qui sollicitent les zones que tu veux ménager, puis je classe le reste selon tes objectifs, l'intensité qui te convient et tes préférences. Je place enfin une séance par jour libre, sans enchaîner deux grosses séances d'affilée.");
+    return ensuite(pucesLibres);
+  }
+  if (/merci|super|parfait|genial|top|nickel/.test(t)) {
+    coach(`Avec plaisir, ${p.prenom}. Bonnes séances, et à bientôt au club !`);
+    return ensuite(pucesLibres);
+  }
+  if (/^(bonjour|salut|coucou|hello|bonsoir)/.test(t)) {
+    coach(`Salut ${p.prenom} ! Je peux te proposer d'autres séances, ajuster l'intensité ou revoir ta fiche.`);
+    return ensuite(pucesLibres);
+  }
+  coach("Je ne suis pas sûr de comprendre. Je peux te proposer d'autres séances, rendre ta semaine plus douce ou plus intense, te montrer les séances d'un jour précis (« et le jeudi ? ») ou corriger ta fiche (« changer mes jours »).");
+  ensuite(pucesLibres);
+}
+
+/* ---------- Entrées utilisateur ---------- */
+function envoyer(texte) {
+  texte = texte.trim();
+  if (!texte) return;
+  moi(texte);
+  choix.textContent = '';
+
+  if (etat.mode === 'libre') return repondreLibre(texte);
+
+  if (etat.mode === 'accueil') {
+    const t = sansAccent(texte);
+    const connue = Object.keys(fiches).find(k => t === k || t.split(/\s+/).includes(k));
+    if (connue) return charger(connue);
+    etat.mode = 'parcours';
+    if (/nouve|autre|personne|premiere/.test(t)) return poser(0);
+    etat.etape = 0; // on prend le texte comme un prénom
+  }
+  if (/^(recommencer|reset|repartir de zero)/.test(sansAccent(texte))) return nouvellePersonne();
+
+  const r = lireReponse(texte);
+  if (r.erreur) { coach(r.erreur); ensuite(pucesEtape); return; }
+  valider(r.valeur);
+}
+
+function charger(cle) {
+  etat.profil = { ...fiches[cle] };
+  etat.vues.clear(); etat.reglage = 0;
+  majSelecteur();
+  if (ficheComplete(etat.profil)) recommander(`Content de te revoir, ${etat.profil.prenom} ! D'après ta fiche, voici ta semaine :`);
+  else { etat.mode = 'parcours'; poser(ETAPES.findIndex(e => etat.profil[e.cle] === undefined)); }
+}
+function nouvellePersonne() {
+  etat.profil = {}; etat.mode = 'parcours'; etat.vues.clear(); etat.reglage = 0;
+  majSelecteur(); majFiche();
+  coach("C'est parti pour une nouvelle fiche.");
+  poser(0);
+}
+
+$('formulaire').addEventListener('submit', ev => { ev.preventDefault(); const t = champ.value; champ.value = ''; envoyer(t); });
+$('selecteur').addEventListener('change', ev => {
+  const cle = ev.target.value;
+  choix.textContent = '';
+  if (cle && fiches[cle]) { moi("C'est " + fiches[cle].prenom); charger(cle); }
+  else { moi("Nouvelle personne"); nouvellePersonne(); }
+});
+$('oublier').addEventListener('click', () => {
+  const p = etat.profil;
+  if (!p.prenom || !confirm(`Effacer la fiche de ${p.prenom} de ce navigateur ?`)) return;
+  delete fiches[sansAccent(p.prenom)];
+  enregistrer();
+  coach(`La fiche de ${p.prenom} est effacée.`);
+  nouvellePersonne();
+});
+
+/* ---------- Démarrage ---------- */
+document.title = "Coach · " + CLUB.nom;
+$('nomClub').textContent = CLUB.nom;
+$('sigle').textContent = CLUB.sigle;
+if (matchMedia('(max-width: 880px)').matches) $('ficheBloc').open = false;
+majSelecteur(); majFiche();
+
+coach(`Salut ! Je suis le coach virtuel de ${CLUB.nom}. En dix questions rapides, je te compose une semaine de séances à ta mesure.`);
+const habitues = Object.values(fiches).map(f => f.prenom);
+if (habitues.length) {
+  coach("Je vois des fiches déjà enregistrées ici. Qui es-tu ?");
+  ensuite(() => puces([
+    ...habitues.map(n => ({ label: n, action: () => { moi(n); choix.textContent = ''; charger(sansAccent(n)); } })),
+    { label: "Nouvelle personne", action: () => { moi("Nouvelle personne"); choix.textContent = ''; etat.mode = 'parcours'; poser(0); } }
+  ]));
+} else {
+  etat.mode = 'parcours';
+  poser(0);
+}
+</script>
+</body>
+</html>

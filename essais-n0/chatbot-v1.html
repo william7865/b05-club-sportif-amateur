@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Coach du club - Chatbot</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #eef2f5;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+    .chat {
+      width: 420px;
+      max-width: 100%;
+      height: 600px;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .chat-header {
+      background: #1b7a4b;
+      color: #fff;
+      padding: 16px;
+      font-size: 18px;
+      font-weight: bold;
+    }
+    .chat-header small { display: block; font-weight: normal; font-size: 13px; opacity: 0.9; }
+    .messages {
+      flex: 1;
+      padding: 12px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .msg {
+      max-width: 80%;
+      padding: 10px 12px;
+      border-radius: 12px;
+      line-height: 1.4;
+      font-size: 15px;
+      white-space: pre-line;
+    }
+    .bot { background: #e6f4ec; align-self: flex-start; }
+    .user { background: #1b7a4b; color: #fff; align-self: flex-end; }
+    .chat-form { display: flex; border-top: 1px solid #ddd; }
+    .chat-form input {
+      flex: 1;
+      border: none;
+      padding: 14px;
+      font-size: 15px;
+      outline: none;
+    }
+    .chat-form button {
+      border: none;
+      background: #1b7a4b;
+      color: #fff;
+      padding: 0 18px;
+      font-size: 15px;
+      cursor: pointer;
+    }
+    .chat-form button:hover { background: #15613b; }
+  </style>
+</head>
+<body>
+  <div class="chat">
+    <div class="chat-header">
+      Coach du club
+      <small>Je te recommande une séance adaptée à ton profil</small>
+    </div>
+    <div class="messages" id="messages"></div>
+    <form class="chat-form" id="form">
+      <input type="text" id="input" placeholder="Écris ton message..." autocomplete="off">
+      <button type="submit">Envoyer</button>
+    </form>
+  </div>
+
+  <script>
+    const messages = document.getElementById('messages');
+    const form = document.getElementById('form');
+    const input = document.getElementById('input');
+
+    const profil = { niveau: null, objectif: null, temps: null };
+
+    function ajouterMessage(texte, auteur) {
+      const div = document.createElement('div');
+      div.className = 'msg ' + auteur;
+      div.textContent = texte;
+      messages.appendChild(div);
+      messages.scrollTop = messages.scrollHeight;
+    }
+
+    function recommander() {
+      const seances = {
+        debutant: {
+          endurance: 'Footing léger : 5 min de marche, puis 6 x (2 min de course / 1 min de marche).',
+          force: 'Circuit au poids du corps : 3 tours de 10 squats, 8 pompes sur les genoux, 20 s de gainage.',
+          souplesse: 'Étirements doux : 8 postures tenues 30 secondes, sans forcer.'
+        },
+        intermediaire: {
+          endurance: 'Fractionné : 15 min de footing, puis 8 x (1 min rapide / 1 min lente).',
+          force: 'Circuit : 4 tours de 15 squats, 12 pompes, 12 fentes par jambe, 40 s de gainage.',
+          souplesse: 'Mobilité active : 10 exercices enchaînés, 2 passages.'
+        },
+        confirme: {
+          endurance: 'Séance au seuil : 20 min de footing, puis 3 x 8 min à allure soutenue.',
+          force: 'Circuit intense : 5 tours de 20 squats sautés, 15 pompes, 10 tractions, 1 min de gainage.',
+          souplesse: 'Mobilité avancée : 12 exercices avec maintien long, 2 passages.'
+        }
+      };
+      const seance = seances[profil.niveau][profil.objectif];
+      return 'Voici ta séance (' + profil.temps + ' min) :\n' + seance +
+        '\nPense à t\'échauffer 10 minutes avant. Tape "recommencer" pour un autre profil.';
+    }
+
+    function repondre(texte) {
+      const t = texte.toLowerCase();
+
+      if (t.includes('recommencer')) {
+        profil.niveau = null;
+        profil.objectif = null;
+        profil.temps = null;
+        return 'On repart de zéro. Quel est ton niveau : débutant, intermédiaire ou confirmé ?';
+      }
+      if (t.includes('bonjour') || t.includes('salut')) {
+        return 'Salut ! Dis-moi ton niveau : débutant, intermédiaire ou confirmé ?';
+      }
+      if (t.includes('horaire') || t.includes('semaine')) {
+        return 'Le club propose des séances le mardi et le jeudi à 19 h, et le samedi à 10 h.';
+      }
+      if (t.includes('échauff') || t.includes('echauff')) {
+        return 'Échauffement type : 5 min de course lente, rotations des articulations, puis 3 accélérations progressives.';
+      }
+
+      if (!profil.niveau) {
+        if (t.includes('débutant') || t.includes('debutant')) profil.niveau = 'debutant';
+        else if (t.includes('intermédiaire') || t.includes('intermediaire')) profil.niveau = 'intermediaire';
+        else if (t.includes('confirmé') || t.includes('confirme')) profil.niveau = 'confirme';
+        else return 'Je n\'ai pas compris. Ton niveau : débutant, intermédiaire ou confirmé ?';
+        return 'Noté. Quel est ton objectif : endurance, force ou souplesse ?';
+      }
+
+      if (!profil.objectif) {
+        if (t.includes('endurance')) profil.objectif = 'endurance';
+        else if (t.includes('force')) profil.objectif = 'force';
+        else if (t.includes('souplesse')) profil.objectif = 'souplesse';
+        else return 'Je n\'ai pas compris. Ton objectif : endurance, force ou souplesse ?';
+        return 'Super. Combien de minutes as-tu pour ta séance ?';
+      }
+
+      if (!profil.temps) {
+        const minutes = parseInt(t);
+        if (isNaN(minutes)) return 'Donne-moi un nombre de minutes, par exemple 45.';
+        profil.temps = minutes;
+        return recommander();
+      }
+
+      return 'Je peux te recommander une séance. Tape "recommencer" pour un nouveau profil.';
+    }
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      const texte = input.value.trim();
+      if (!texte) return;
+      ajouterMessage(texte, 'user');
+      input.value = '';
+      setTimeout(function () {
+        ajouterMessage(repondre(texte), 'bot');
+      }, 400);
+    });
+
+    ajouterMessage('Bonjour ! Je suis le coach du club. Quel est ton niveau : débutant, intermédiaire ou confirmé ?', 'bot');
+  </script>
+</body>
+</html>
