@@ -458,12 +458,12 @@ CRITÈRE D'ARRÊT : app.js empêche seulement le rechargement de la page à l'en
 | 2 | « Étape 2 seulement : dans public/js/app.js, un clic sur un bouton de ul#suggestions copie le texte de ce bouton dans le champ #message. Rien n'est envoyé. Aucun autre fichier, aucun autre changement. » | `app.js` seul, 8 lignes ajoutées. Non demandé : trois protections (`?.`, `contains`, `if (messageInput)`). | Refusé en partie (voir « Mon refus écrit »), puis accepté après correction : 7 lignes ajoutées. Le clic copie la question, le statut ne change pas, rien n'est envoyé. Commit « J1 : étape 2, un clic copie la question dans le champ ». |
 | 3 | « Étape 3 seulement : dans public/js/app.js, après le clic sur un bouton de ul#suggestions, mets le curseur dans le champ #message et écris dans p#status « Question copiée : modifiez-la ou envoyez-la. ». Aucun autre fichier, aucun autre changement, aucune protection en plus. » | `app.js` seul, 2 lignes ajoutées : `messageInput.focus()` et le texte du statut. Rien de non demandé. | Accepté. Après le clic, le curseur est dans `#message` et le statut dit « Question copiée : modifiez-la ou envoyez-la. ». `npm test` 9 sur 9. Commit « J1 : étape 3, curseur dans le champ et statut ». |
 | 4 | Demande ciblée de J1-08 en six parties : corriger le dépassement de 183 px à 360 px, dans `styles.css` seulement | `styles.css` seul, 4 lignes ajoutées (`overflow-wrap: break-word` sur `#messages li`). Rien de non demandé. | Accepté. Dépassement mesuré : 183 px avant, 0 px après. |
-| 5 | | | |
-| 6 | | | |
-| 7 | | | |
-| 8 | | | |
-| 9 | | | |
-| 10 | | | |
+| 5 | L'envoi, dans `app.js` : ligne « Vous : … », refus du message vide avec statut et focus, champ et statut vidés après envoi ; contre-exemple `<b>gras</b>` | `app.js` seul, 12 lignes ajoutées, 1 retirée. `createElement('li')` et `textContent`. Rien de non demandé. | Accepté. « salut » donne « Vous : salut » ; trois espaces donnent le statut d'erreur, aucune ligne, focus dans le champ ; `<b>gras</b>` s'affiche avec ses chevrons (0 balise `b` dans la page). |
+| 6 | Le cerveau : nouveau `brain.js` (`validateMessage`, `replyTo`), et `js/brain.js` ajouté à `FICHIERS` et `TYPES` dans `server/app.js` ; contre-exemple « tester » | `brain.js` nouveau (24 lignes, lu en entier) ; `server/app.js` : 2 lignes ajoutées, 2 virgules. Aucun `document`, `window` ni `localStorage`. Une faute dans un message : « avant de envoyer ». | Accepté, faute à corriger à la demande suivante. ` SALUT ` et « Bonjour » ont la même réponse, « tester » reçoit le repli, `/js/brain.js` répond 200, `npm test` 9 sur 9. |
+| 7 | Brancher, dans `app.js` : import de `validateMessage` et `replyTo`, ligne « Cap Web : … » ; `type="module"` remis dans `index.html` ; faute corrigée dans `brain.js` | Trois fichiers : `index.html` 1 ligne, `app.js` 8 lignes ajoutées et 5 retirées, `brain.js` 1 ligne. Dans `brain.js`, la correction a cassé le fichier : `'… avant d'envoyer.'`, l'apostrophe ferme la chaîne. | Refusé pour `brain.js` : `node --check` répond `SyntaxError: Unexpected identifier 'envoyer'`, la page ne chargerait plus aucun module. Demandé à la place : corriger cette seule ligne et vérifier avec `node --check`. Nouveau diff relu (guillemets doubles), puis accepté : « salut », « BONJOUR », « aide », « test », une phrase inconnue, trois espaces et `<b>gras</b>` donnent le résultat attendu. |
+| 8 | Notre cahier, dans `brain.js` : mots « prairie » et « mission », limite de 320 avec une seule constante ; contre-exemples « prairies » et « ma mission » | `brain.js` seul, 11 lignes ajoutées : constante `LIMITE_MESSAGE = 320`, un test de longueur, deux `if`. Le nombre 320 n'apparaît qu'une fois. | Accepté. ` PRAIRIE ` et « Mission » ont chacun leur réponse ; « prairies » et « ma mission » reçoivent le repli ; 320 caractères passent, 321 sont refusés avec « Message trop long : 320 caractères maximum. ». |
+| 9 | Ranger : plan demandé d'abord (cinq lignes, rien d'écrit), puis `view.js` nouveau (`renderMessages`), `app.js` avec un tableau `historique`, `js/view.js` ajouté au serveur | Plan accepté tel quel. `view.js` nouveau (12 lignes, lu en entier) ; `app.js` 5 lignes ajoutées, 6 retirées ; `server/app.js` 2 lignes ajoutées. Plus de `createElement` dans `app.js`. | Accepté. Même comportement dans la page, `/js/view.js` répond 200, aucun `innerHTML`, `npm test` 9 sur 9. |
+| 10 | La mémoire, dans `app.js` et `index.html` : `capweb.historique` en JSON, relu dans un `try/catch`, bouton `#effacer` avec `confirm` ; contre-exemple `{pas du json` | `index.html` 1 ligne (le bouton) ; `app.js` 29 lignes ajoutées : constante `CLE_MEMOIRE`, lecture dans `try/catch` avec `Array.isArray`, `setItem` à l'envoi, écouteur du bouton. Rien de non demandé. | Accepté. F5 garde les 2 lignes ; « Effacer » annulé garde tout, accepté vide tout, y compris après F5 ; `{pas du json` et `{"a":1}` donnent une conversation vide et le statut « Historique illisible : la conversation repart vide. ». |
 
 ### J1-08 · 🔎 Revue de la page — [fiche](checkpoints/J1-08-revue-de-la-page.md)
 
@@ -512,20 +512,20 @@ CRITÈRE D'ARRÊT : quand ce seul défaut est corrigé, tu t'arrêtes.
 ### J1-09 · 🧠 Un cerveau à règles, par prompts — [fiche](checkpoints/J1-09-cerveau-a-regles.md)
 
 - [ ] Validé
-- Preuve (comportements vérifiés : « Vous : … », message vide, `<b>gras</b>`, mes deux mots, ma limite ; `/js/brain.js` et `/js/view.js` affichés ; F5 ; « Effacer ») :
+- Preuve (comportements vérifiés : « Vous : … », message vide, `<b>gras</b>`, mes deux mots, ma limite ; `/js/brain.js` et `/js/view.js` affichés ; F5 ; « Effacer ») : tout est vérifié, détail dans les lignes 5 à 10 du journal. `/js/app.js`, `/js/brain.js` et `/js/view.js` répondent 200. Dans la page, `validateMessage('a'.repeat(320)).ok` vaut `true` et avec 321 `false`. Aucune erreur dans la console, aucun défilement horizontal à 360, 768 et 1280 px. Vérifications faites dans un navigateur de test piloté par script (Chromium), pas à la main. Un commit par demande acceptée.
 - Mes six demandes et leurs verdicts : dans le journal des décisions ci-dessus.
 - Le rôle de chaque fichier, en une phrase chacun :
-  - `app.js` :
-  - `brain.js` :
-  - `view.js` :
-- Ce que j'ai vu quand j'ai mis `{pas du json` dans la mémoire :
+  - `app.js` : il relie la page au reste : il écoute le formulaire et les boutons, tient le tableau `historique`, l'enregistre dans la mémoire et demande l'affichage.
+  - `brain.js` : les règles, sans toucher à la page : `validateMessage` dit si un message est acceptable (non vide, 320 caractères au plus) et `replyTo` choisit la réponse selon le mot.
+  - `view.js` : l'affichage : `renderMessages` vide la liste et y remet un `li` par message, en `textContent`.
+- Ce que j'ai vu quand j'ai mis `{pas du json` dans la mémoire : après rechargement, la liste est vide, le statut affiche « Historique illisible : la conversation repart vide. », la page ne plante pas et un nouvel envoi fonctionne (2 lignes).
 - Difficulté qui reste :
 
 ### J1-10 · 🧪 Épreuve de l'explication — [fiche](checkpoints/J1-10-epreuve-explication.md)
 
 - [ ] Validé
-- Preuve (`npm test` vert avec cinq tests dont ma limite, commit de sauvegarde, remise faite) :
-- Le test rouge : son nom, son message exact, et ce qu'il m'a appris :
+- Preuve (`npm test` vert avec cinq tests dont ma limite, commit de sauvegarde, remise faite) : `npm test` → 14 tests, 14 réussis (9 du serveur, 5 de `tests/brain.test.js`, dont la limite de 320). `npm run lint` sans erreur. Les cinq tests ont été écrits par `dsh` dans une session neuve, à partir d'une demande qui interdisait de recopier le texte des réponses. Commit « J1 : Cap Web répond », poussé sur le dépôt du binôme.
+- Le test rouge : son nom, son message exact, et ce qu'il m'a appris : dans `brain.js`, `LIMITE_MESSAGE` passé de 320 à 330. Test devenu rouge : « la limite accepte N caractères et refuse N + 1 », message exact `AssertionError [ERR_ASSERTION]: Expected values to be strictly equal: true !== false`, à `tests/brain.test.js:18` (13 réussis, 1 échoué). Avec 330, un message de 321 caractères passe alors que le test attend un refus. Après `git restore atelier/public/js/brain.js` : 14 sur 14. Ce test vérifie donc bien la limite du cahier.
 - Épreuve de l'explication, éditeur fermé :
   - Ce que je n'ai pas su expliquer :
   - Ce que mon binôme n'a pas su expliquer :
