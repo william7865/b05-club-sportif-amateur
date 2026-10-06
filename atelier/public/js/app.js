@@ -7,6 +7,8 @@ suggestions.addEventListener('click', (event) => {
   const button = event.target.closest('button');
   if (!button) return;
   messageInput.value = button.textContent.trim();
+  messageInput.focus();
+  status.textContent = 'Question copiée : modifiez-la ou envoyez-la.';
 });
 
 form.addEventListener('submit', (event) => {
