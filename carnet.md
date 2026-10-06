@@ -12,7 +12,7 @@ Trois questions auxquelles l'assistant pourrait répondre :
 2. Quelles séances sont prévues cette semaine ?
 3. Comment m'échauffer avant une séance ?
 
-Rôles de départ et moments d'échange :
+Rôles de départ et moments d'échange : William manipule, Nicolas vérifie. Échange des rôles environ toutes les 20 minutes.
 
 ## Cahier personnel (remis par le formateur en J1-01)
 
