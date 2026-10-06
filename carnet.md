@@ -293,9 +293,80 @@ Pour chaque checkpoint : cochez la case quand toute la preuve de la fiche est r�
 ### J1-05 · 🛠 dsh en main — [fiche](checkpoints/J1-05-dsh-en-main.md)
 
 - [ ] Validé
-- Preuve (`dsh --version`, mode Read Only, modèle `capweb-ia`, `git status -- atelier` propre ; **jamais la clé**) :
+- Preuve (`dsh --version`, mode Read Only, modèle `capweb-ia`, `git status -- atelier` propre ; **jamais la clé**) : `dsh --version` → `0.1.5-rc.2`. Premier essai depuis `atelier` : `dsh --profile headless "Reponds uniquement OK"` → `OK`. Avant ça, une erreur `"refs" in .credentials.yaml must be a mapping` : un espace supprimé par erreur dans `.credentials.yaml`, corrigé à la main.
 - La consigne exacte envoyée à l'agent et sa réponse :
+
+  Consigne (envoyée depuis `atelier` avec `dsh --profile headless "…"`, modèle `capweb-ia`, réglage `defaultPreset: read-only`) :
+
+  > Liste les fichiers de ce dossier et dis ce que fait chacun. Donne le chemin de chaque fichier. Si tu ne sais pas ce que fait un fichier, écris « je ne sais pas ». N'écris rien et ne modifie rien.
+
+  Réponse de l'agent (le début des chemins, propre au poste, est raccourci) :
+
+  > Voici les fichiers trouvés dans ce dossier `atelier` — 13 fichiers :
+  >
+  > **1. Chemin : `atelier/README.md`**
+  > Documentation de l'atelier J1. Explique comment démarrer (`npm start` sur `http://127.0.0.1:3000`), comment vérifier (`npm test`, `npm run verify`), et renvoie aux checkpoints.
+  >
+  > **2. Chemin : `atelier/package.json`**
+  > Manifeste npm du projet. Définit `type: module`, Node `>=24.20.0`, les scripts `start` (`node server/start.js`), `test`, `lint`, `test:browser`, `verify`, et les `devDependencies` (playwright, axe-core, eslint).
+  >
+  > **3. Chemin : `atelier/package-lock.json`**
+  > Fichier de verrouillage npm. Fige les versions exactes et les URL/intégrités de toutes les dépendances installées (1044 lignes).
+  >
+  > **4. Chemin : `atelier/.gitignore`**
+  > Liste des dossiers ignorés par Git : `node_modules/`, `dist/`, `preuves/`, `test-results/`, `playwright-report/`, `coverage/`.
+  >
+  > **5. Chemin : `atelier/eslint.config.js`**
+  > Configuration ESLint (flat config). Définit des règles pédagogiques (`no-unused-vars`, `eqeqeq`, `no-var`, `prefer-const`) et les variables globales autorisées pour le navigateur (`public/js/`) et pour Node (serveur, tests, configs).
+  >
+  > **6. Chemin : `atelier/playwright.config.js`**
+  > Configuration Playwright pour le test navigateur. Lance Chromium headless, `baseURL http://127.0.0.1:4173`, dossier de tests `./browser`, et démarre automatiquement le serveur avec `node server/start.js`.
+  >
+  > **7. Chemin : `atelier/server/app.js`**
+  > Cœur du serveur HTTP Node (sans framework). Exporte `createApp()` : ne sert qu'une liste explicite (`/`, `/index.html`, `/styles.css`, `/js/app.js` + `/version.json`), n'accepte que GET/HEAD (405 sinon), renvoie 404 neutre pour tout le reste, avec bons types MIME.
+  >
+  > **8. Chemin : `atelier/server/start.js`**
+  > Point d'entrée qui démarre le serveur. Calcule le dossier `public/`, lit le port `PORT` (défaut 3000, validé 1-65535) sur `127.0.0.1`, affiche `Cap Web prêt sur...`, et gère l'arrêt propre sur SIGINT/SIGTERM.
+  >
+  > **9. Chemin : `atelier/public/index.html`**
+  > Page d'accueil HTML. Titre `Cap Web — départ`, lie `styles.css` et `js/app.js`, contient un `<main>` avec `<h1>Cap Web</h1>` et un `<p id="status" role="status">`.
+  >
+  > **10. Chemin : `atelier/public/styles.css`**
+  > Feuille de style minimale de départ : police système, marge, couleur texte, fond blanc, et centrage du `main` à 48rem max.
+  >
+  > **11. Chemin : `atelier/public/js/app.js`**
+  > Script navigateur de départ (1 ligne). Remplit `#status` avec le texte `Votre point de départ est prêt.`.
+  >
+  > **12. Chemin : `atelier/tests/server.test.js`**
+  > 9 tests serveur avec `node:test`. Vérifient que `/`, `/styles.css`, `/js/app.js`, `HEAD /`, `/version.json` fonctionnent, que les URL inconnues font 404, que POST fait 405, et que les fichiers privés (`server/`, `.env`, `package.json`) et les tentatives `../` ou encodées ne fuient rien.
+  >
+  > **13. Chemin : `atelier/browser/depart.spec.js`**
+  > Test navigateur Playwright. Ouvre `/`, vérifie que le titre `Cap Web` est visible, que l'élément `status` est présent, et qu'il n'y a aucune erreur JavaScript.
+
+  Après la réponse : `git status --short -- atelier` n'affiche rien, aucun fichier modifié ni nouveau.
+
+  La barrière tient : à la demande « Crée le fichier public/essai-dsh.txt contenant ok », l'agent répond que la politique est en lecture seule et que l'écriture est refusée (`requires approval, but no approval channel is available`). `git status --short -- atelier` reste vide et `public/` ne contient que `index.html`, `styles.css` et `js`.
+
 - Pour chaque fichier cité : existe ou non, description juste ou fausse, pourquoi ; et un fichier qu'il n'a pas cité :
+
+  | Fichier cité | Existe ? | Description | Pourquoi (vérifié dans le fichier) |
+  |---|---|---|---|
+  | `README.md` | existe | juste | parle bien de `npm start`, `npm test`, `npm run verify` |
+  | `package.json` | existe | juste | `type: module`, Node `>=24.20.0`, les cinq scripts et les trois dépendances de développement |
+  | `package-lock.json` | existe | juste | 1044 lignes, compté avec `wc -l` |
+  | `.gitignore` | existe | juste | les six dossiers cités sont ceux du fichier |
+  | `eslint.config.js` | existe | juste | les quatre règles citées sont aux lignes 6 à 10 |
+  | `playwright.config.js` | existe | juste | port 4173, dossier `./browser`, commande `node server/start.js` |
+  | `server/app.js` | existe | juste | liste de quatre adresses (lignes 7 à 10), `/version.json` ligne 50, 405 ligne 35, 404 pour le reste |
+  | `server/start.js` | existe | juste | port 3000 par défaut, validé de 1 à 65535, `127.0.0.1`, SIGINT et SIGTERM |
+  | `public/index.html` | existe | juste | `main`, `h1`, `p#status` avec `role="status"` |
+  | `public/styles.css` | existe | juste | `max-width: 48rem` sur `main`, fond blanc |
+  | `public/js/app.js` | existe | juste | une seule ligne, qui écrit « Votre point de départ est prêt. » |
+  | `tests/server.test.js` | existe | juste | 9 tests comptés |
+  | `browser/depart.spec.js` | existe | juste | vérifie le titre, le statut et l'absence d'erreur |
+
+  Fichier non cité : aucun trouvé. `find` liste 13 fichiers dans `atelier` (hors `node_modules`) et l'agent a cité les 13. Il n'a écrit « je ne sais pas » pour aucun.
+
 - Difficulté qui reste :
 
 ### J1-06 · 🧱 Anatomie d'un prompt — [fiche](checkpoints/J1-06-anatomie-dun-prompt.md)
